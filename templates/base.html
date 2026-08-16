@@ -31,6 +31,7 @@
     <div class="nav-group">
       <p class="nav-label">Knowledge</p>
       <ul class="nav-list">
+        <li><a href="{% url 'dashboard:capture' %}" {% if nav == 'capture' %}aria-current="page"{% endif %}>Capture</a></li>
         <li><a href="{% url 'dashboard:notes' %}" {% if nav == 'notes' %}aria-current="page"{% endif %}>All notes</a></li>
         <li><a href="{% url 'dashboard:notes' %}?type=take">Takes<span class="nav-count">{{ counts.take }}</span></a></li>
         <li><a href="{% url 'dashboard:notes' %}?type=story">Stories<span class="nav-count">{{ counts.story }}</span></a></li>
@@ -55,15 +56,9 @@
     </div>
 
     <div class="nav-group">
-      <p class="nav-label">Claude</p>
+      <p class="nav-label">Tools</p>
       <ul class="nav-list">
-        <li><a href="{% url 'dashboard:skills' %}" {% if nav == 'skills' %}aria-current="page"{% endif %}>Skills</a></li>
-      </ul>
-    </div>
-
-    <div class="nav-group">
-      <p class="nav-label">Safety</p>
-      <ul class="nav-list">
+        <li><a href="{% url 'dashboard:skills' %}" {% if nav == 'skills' %}aria-current="page"{% endif %}>Claude skills</a></li>
         <li><a href="{% url 'dashboard:backup' %}" {% if nav == 'backup' %}aria-current="page"{% endif %}>Backup</a></li>
       </ul>
     </div>

@@ -96,7 +96,7 @@ a:hover { text-decoration-color: var(--accent); }
 .sidebar {
   width: var(--sidebar);
   flex: none;
-  padding: 2.2rem 1.4rem 3rem;
+  padding: 1.7rem 1.4rem 2rem;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -117,17 +117,17 @@ a:hover { text-decoration-color: var(--accent); }
 .brand-sub {
   font: 400 .72rem/1.4 var(--mono);
   color: var(--ink-faint);
-  margin: 0 0 2rem;
+  margin: 0 0 1.4rem;
   letter-spacing: .01em;
 }
 
-.nav-group { margin-bottom: 1.6rem; }
+.nav-group { margin-bottom: 1.05rem; }
 .nav-label {
   font: 500 .66rem/1 var(--mono);
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  margin: 0 0 .6rem;
+  margin: 0 0 .35rem;
 }
 .nav-list { list-style: none; margin: 0; padding: 0; }
 .nav-list a {
@@ -135,7 +135,7 @@ a:hover { text-decoration-color: var(--accent); }
   justify-content: space-between;
   align-items: baseline;
   gap: .5rem;
-  padding: .2rem 0;
+  padding: .13rem 0;
   text-decoration: none;
   color: var(--ink-soft);
   font-size: .93rem;
@@ -525,3 +525,13 @@ h3 { font: 600 1rem/1.3 var(--serif); margin: 1.6rem 0 .5rem; }
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* --------------------------------------------------------------- capture */
+
+.checks--radio label {
+  border: 1px solid var(--rule-firm);
+  padding: .35rem .7rem;
+  font-size: .82rem;
+}
+.checks--radio label:hover { border-color: var(--accent); color: var(--ink); }
+.checks--radio, .checks--radio > div { gap: .4rem; }

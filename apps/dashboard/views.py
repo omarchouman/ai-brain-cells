@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.brain.notes import IDENTITY_SLUGS, NOTE_TYPES, IdentityDoc
@@ -36,6 +37,7 @@ from apps.brain.writer import (
 from .access import brain_exists, brain_root, current_brain
 from .forms import (
     TYPE_HELP,
+    CaptureForm,
     IdentityForm,
     LensForm,
     NoteForm,
@@ -251,6 +253,39 @@ def notes(request: HttpRequest) -> HttpResponse:
             "superseded_count": len(
                 [n for n in brain.notes if n.status == "superseded"]
             ),
+        },
+    )
+
+
+@needs_brain
+def capture(request: HttpRequest) -> HttpResponse:
+    """Get the thought down. Refining it is a separate, later decision."""
+    brain = current_brain()
+
+    if request.method == "POST":
+        form = CaptureForm(request.POST, brain=brain)
+        if form.is_valid():
+            note = form.to_note()
+            assign_note_id(brain_root(), note)
+            result = save_note(brain_root(), note)
+            _report(request, result, f"Captured: {note.title}")
+            return redirect(f"{reverse('dashboard:capture')}?saved={note.id}")
+    else:
+        form = CaptureForm(brain=brain, initial={"type": "take"})
+
+    saved_id = request.GET.get("saved", "")
+    return render(
+        request,
+        "dashboard/capture.html",
+        {
+            "nav": "capture",
+            "page_title": "Capture",
+            "brain": brain,
+            "counts": _nav_counts(brain),
+            "form": form,
+            "saved": brain.note(saved_id) if saved_id else None,
+            "recent": [n for n in brain.notes if n.is_current][:5],
+            "type_help": TYPE_HELP,
         },
     )
 

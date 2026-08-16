@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">Capture</p>
+  <h1>Get it down</h1>
+  <p class="lede">
+    One box. First line is the title, the rest is the body, everything else
+    takes a default. Refining is a later decision — most notes die as ideas
+    because the full editor asks eight questions of a thought that took four
+    seconds to have.
+  </p>
+</div>
+
+{% if saved %}
+<div class="notice notice--plain">
+  <p>
+    <span class="notice-title">Saved.</span>
+    <a href="{% url 'dashboard:note_edit' note_id=saved.id %}">{{ saved.title }}</a>
+    — add topics, a date, or your own words to it whenever you like.
+  </p>
+</div>
+{% endif %}
+
+<form method="post" id="capture-form">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <ul class="errors">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  <div class="field">
+    <p class="field-legend">It's a…</p>
+    <div class="checks checks--radio">{{ form.type }}</div>
+    {% if form.type.errors %}<ul class="errors">{% for e in form.type.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    <p class="help" id="type-help"></p>
+  </div>
+
+  <div class="field">
+    <label for="{{ form.text.id_for_label }}">{{ form.text.label }}</label>
+    {{ form.text }}
+    <p class="help">{{ form.text.help_text }}</p>
+    {% if form.text.errors %}<ul class="errors">{% for e in form.text.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+
+  {% if form.topics.field.choices %}
+  <div class="field">
+    <p class="field-legend">Topics <span class="help">— optional, but nothing finds an untagged note by subject</span></p>
+    <div class="checks">{{ form.topics }}</div>
+    {% if form.topics.errors %}<ul class="errors">{% for e in form.topics.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="field field--verbatim">
+    <label for="{{ form.verbatim.id_for_label }}">In my words</label>
+    {{ form.verbatim }}
+    <p class="help">{{ form.verbatim.help_text }}</p>
+  </div>
+
+  <div class="form-foot">
+    <button type="submit" class="btn">Capture</button>
+    <span class="help">⌘↵ / Ctrl+↵ also saves. Dated this month, public, and yours to refine.</span>
+  </div>
+</form>
+
+{% if recent %}
+<h2>Lately</h2>
+<ul class="rows">
+  {% for note in recent %}
+  <li>
+    <a class="row" href="{% url 'dashboard:note_edit' note_id=note.id %}">
+      <span class="row-title">{{ note.title }}</span>
+      {% if not note.topics %}<span class="tag tag--quiet">untagged</span>{% endif %}
+      {% if not note.verbatim %}<span class="tag tag--quiet">no voice line</span>{% endif %}
+      <span class="tag tag--type">{{ note.type }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+<p class="help">
+  Anything marked untagged or missing a voice line still works — it's just
+  reachable by less, and sounds less like you when it's used.
+</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const help = {
+    {% for type, text in type_help.items %}"{{ type }}": "{{ text|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}
+  };
+  const target = document.getElementById("type-help");
+  const form = document.getElementById("capture-form");
+
+  function showHelp() {
+    const picked = form.querySelector("input[name=type]:checked");
+    target.textContent = picked ? help[picked.value] || "" : "";
+  }
+
+  form.querySelectorAll("input[name=type]").forEach(function (input) {
+    input.addEventListener("change", showHelp);
+  });
+  showHelp();
+
+  // Saving without reaching for the mouse is most of why this page is fast.
+  form.addEventListener("keydown", function (event) {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      form.submit();
+    }
+  });
+})();
+</script>
+{% endblock %}

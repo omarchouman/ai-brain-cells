@@ -239,6 +239,79 @@ class LensForm(BaselineForm):
         )
 
 
+class CaptureForm(forms.Form):
+    """The smallest form that can still produce a valid note.
+
+    Most notes die as ideas because the full editor asks eight questions of
+    a thought that took four seconds to have. Here the first line becomes
+    the title and the rest becomes the body, which removes the field people
+    stall on, and everything else takes a default you can fix later.
+    """
+
+    type = forms.ChoiceField(
+        choices=[(t, t) for t in NOTE_TYPES], widget=forms.RadioSelect
+    )
+    text = forms.CharField(
+        label="What's the thought?",
+        widget=forms.Textarea(attrs={"rows": 8, "autofocus": "autofocus"}),
+        help_text=(
+            "First line becomes the title — write it as a claim. Everything "
+            "after it becomes the body."
+        ),
+    )
+    topics = TopicsField(required=False, widget=forms.CheckboxSelectMultiple)
+    verbatim = forms.CharField(
+        required=False,
+        label="In my words",
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Optional now, and worth adding before this note gets used.",
+    )
+
+    def __init__(self, *args, brain=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["topics"].choices = [(t, t) for t in (brain.topics if brain else [])]
+
+    def clean_text(self):
+        lines = self.cleaned_data["text"].strip().splitlines()
+        title = next((line.strip() for line in lines if line.strip()), "")
+        if not title:
+            raise forms.ValidationError("Write something first.")
+        if slugify(title) == "untitled":
+            raise forms.ValidationError(
+                "The first line has no letters or numbers in it, so it can't "
+                "become a title."
+            )
+        if len(title) > 180:
+            raise forms.ValidationError(
+                "That first line is very long for a title. Put the claim on "
+                "line one and the detail underneath."
+            )
+
+        index = lines.index(next(line for line in lines if line.strip()))
+        self.cleaned_data["title"] = title
+        # A one-line thought is a real note. Rather than reject it or leave
+        # the body empty, the claim stands as its own body.
+        self.cleaned_data["body"] = "\n".join(lines[index + 1 :]).strip() or title
+        return self.cleaned_data["text"]
+
+    def to_note(self, today: date | None = None) -> Note:
+        data = self.cleaned_data
+        today = today or date.today()
+        return Note(
+            id="",
+            type=data["type"],
+            title=data["title"],
+            topics=list(data["topics"]),
+            projects=[],
+            status="current",
+            superseded_by=None,
+            visibility="public",
+            date=f"{today.year:04d}-{today.month:02d}",
+            source_url=None,
+            body=join_verbatim(data["body"], data["verbatim"]),
+        )
+
+
 class RemoteForm(forms.Form):
     url = forms.CharField(
         label="Backup remote",
