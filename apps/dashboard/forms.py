@@ -239,6 +239,30 @@ class LensForm(BaselineForm):
         )
 
 
+class RemoteForm(forms.Form):
+    url = forms.CharField(
+        label="Backup remote",
+        max_length=400,
+        help_text=(
+            "An SSH or HTTPS git URL — git@github.com:you/my-brain.git. "
+            "Make the repository private."
+        ),
+    )
+
+    def clean_url(self):
+        url = self.cleaned_data["url"].strip()
+        looks_like_git = (
+            url.startswith(("https://", "ssh://", "git@", "file://", "/"))
+            or url.startswith(".")
+        )
+        if not looks_like_git:
+            raise forms.ValidationError(
+                "That doesn't look like a git remote. Use an SSH URL "
+                "(git@host:you/repo.git) or an HTTPS one."
+            )
+        return url
+
+
 class TaxonomyForm(BaselineForm):
     topics = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 14}),

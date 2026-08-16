@@ -9,7 +9,16 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.brain.notes import IDENTITY_SLUGS, NOTE_TYPES, IdentityDoc
-from apps.brain.repo import initialize_brain, is_repo, recent_commits
+from apps.brain.repo import (
+    get_remote,
+    initialize_brain,
+    is_repo,
+    push,
+    recent_commits,
+    remove_remote,
+    set_remote,
+    unpushed_count,
+)
 from apps.brain.storage import content_fingerprint
 from apps.brain.taxonomy import taxonomy_path
 from apps.brain.writer import (
@@ -31,6 +40,7 @@ from .forms import (
     LensForm,
     NoteForm,
     ProjectForm,
+    RemoteForm,
     TaxonomyForm,
 )
 from .rendering import render_markdown, split_verbatim
@@ -528,6 +538,75 @@ def project_delete(request: HttpRequest, slug: str) -> HttpResponse:
     )
     _report(request, result, f"Deleted project: {card.title}")
     return redirect("dashboard:projects")
+
+
+# ------------------------------------------------------------------ backup
+
+
+@needs_brain
+def backup(request: HttpRequest) -> HttpResponse:
+    root = brain_root()
+    brain = current_brain()
+    remote = get_remote(root)
+    return render(
+        request,
+        "dashboard/backup.html",
+        {
+            "nav": "backup",
+            "page_title": "Backup",
+            "brain": brain,
+            "counts": _nav_counts(brain),
+            "brain_path": root,
+            "tracked": is_repo(root),
+            "remote": remote,
+            "form": RemoteForm(initial={"url": remote or ""}),
+            "unpushed": unpushed_count(root),
+            "commits": recent_commits(root, limit=5),
+            "private_notes": len(
+                [n for n in brain.notes if n.visibility == "private"]
+            ),
+        },
+    )
+
+
+@require_POST
+@needs_brain
+def backup_set_remote(request: HttpRequest) -> HttpResponse:
+    form = RemoteForm(request.POST)
+    if not form.is_valid():
+        for error in form.errors.get("url", []):
+            messages.error(request, error)
+    else:
+        result = set_remote(brain_root(), form.cleaned_data["url"])
+        (messages.success if result.ok else messages.error)(request, result.detail)
+    return redirect("dashboard:backup")
+
+
+@require_POST
+@needs_brain
+def backup_remove_remote(request: HttpRequest) -> HttpResponse:
+    result = remove_remote(brain_root())
+    (messages.success if result.ok else messages.error)(request, result.detail)
+    return redirect("dashboard:backup")
+
+
+@require_POST
+@needs_brain
+def backup_push(request: HttpRequest) -> HttpResponse:
+    """Send the brain to its remote.
+
+    This publishes everything in the brain to wherever the remote points,
+    including notes marked private — git has no concept of visibility. The
+    page says so, and the button confirms, but the honest summary is that
+    the remote being private is the user's responsibility and nothing here
+    can verify it.
+    """
+    result = push(brain_root())
+    if result.ok:
+        messages.success(request, result.detail)
+    else:
+        messages.error(request, f"Push failed: {result.detail}")
+    return redirect("dashboard:backup")
 
 
 # ------------------------------------------------------------------ skills

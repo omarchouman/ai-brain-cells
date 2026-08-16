@@ -8,6 +8,7 @@ someone's writing because a subprocess exited non-zero would be a bad
 trade for a tidier log.
 """
 
+import os
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -15,6 +16,8 @@ from pathlib import Path
 
 FALLBACK_IDENTITY = ("ai-brain-cells", "brain@localhost")
 GIT_TIMEOUT_SECONDS = 15
+# Pushing crosses a network; the local commands do not.
+PUSH_TIMEOUT_SECONDS = 60
 
 
 @dataclass
@@ -34,12 +37,28 @@ class CommitEntry:
     when: str
 
 
-def _run(root: Path, *args: str) -> subprocess.CompletedProcess:
+def _noninteractive_env() -> dict[str, str]:
+    """Git that fails instead of asking for a password.
+
+    A push from a web request has no terminal to prompt on. Without these,
+    git blocks on a credential prompt nobody can answer and the request
+    hangs until it times out, which looks exactly like the app freezing.
+    """
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env.setdefault("GIT_SSH_COMMAND", "ssh -o BatchMode=yes")
+    return env
+
+
+def _run(
+    root: Path, *args: str, timeout: int = GIT_TIMEOUT_SECONDS
+) -> subprocess.CompletedProcess:
     return subprocess.run(
         ["git", "-C", str(root), *args],
         capture_output=True,
         text=True,
-        timeout=GIT_TIMEOUT_SECONDS,
+        timeout=timeout,
+        env=_noninteractive_env(),
     )
 
 
@@ -153,6 +172,108 @@ def recent_commits(root: Path, limit: int = 10) -> list[CommitEntry]:
         if len(parts) == 3:
             entries.append(CommitEntry(*parts))
     return entries
+
+
+# ------------------------------------------------------------------ backup
+
+
+def current_branch(root: Path) -> str:
+    try:
+        result = _run(Path(root), "rev-parse", "--abbrev-ref", "HEAD")
+    except (OSError, subprocess.SubprocessError):
+        return "main"
+    branch = result.stdout.strip()
+    return branch if result.returncode == 0 and branch != "HEAD" else "main"
+
+
+def get_remote(root: Path, name: str = "origin") -> str | None:
+    root = Path(root)
+    if not is_repo(root):
+        return None
+    try:
+        result = _run(root, "remote", "get-url", name)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def set_remote(root: Path, url: str, name: str = "origin") -> GitResult:
+    root = Path(root)
+    if not is_repo(root):
+        return GitResult(False, detail="This brain is not a git repository.")
+    action = "set-url" if get_remote(root, name) else "add"
+    try:
+        result = _run(root, "remote", action, name, url)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return GitResult(False, detail=str(exc))
+    if result.returncode != 0:
+        return GitResult(False, detail=result.stderr.strip())
+    return GitResult(True, detail=f"Backup remote set to {url}")
+
+
+def remove_remote(root: Path, name: str = "origin") -> GitResult:
+    root = Path(root)
+    if not get_remote(root, name):
+        return GitResult(True, detail="No remote was set.")
+    try:
+        result = _run(root, "remote", "remove", name)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return GitResult(False, detail=str(exc))
+    if result.returncode != 0:
+        return GitResult(False, detail=result.stderr.strip())
+    return GitResult(True, detail="Backup remote removed.")
+
+
+def unpushed_count(root: Path, name: str = "origin") -> int | None:
+    """Commits the remote hasn't seen. None means it has never been pushed."""
+    root = Path(root)
+    if not is_repo(root) or not get_remote(root, name):
+        return None
+    branch = current_branch(root)
+    try:
+        result = _run(root, "rev-list", "--count", f"{name}/{branch}..{branch}")
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    try:
+        return int(result.stdout.strip())
+    except ValueError:
+        return None
+
+
+def push(root: Path, name: str = "origin") -> GitResult:
+    """Push the brain to its backup remote.
+
+    Never interactive: git is configured to fail rather than prompt, so a
+    missing credential comes back as an error message instead of a request
+    that hangs forever.
+    """
+    root = Path(root)
+    if not is_repo(root):
+        return GitResult(False, detail="This brain is not a git repository.")
+    if not get_remote(root, name):
+        return GitResult(False, detail="No backup remote is set.")
+
+    branch = current_branch(root)
+    try:
+        result = _run(
+            root, "push", "-u", name, branch, timeout=PUSH_TIMEOUT_SECONDS
+        )
+    except subprocess.TimeoutExpired:
+        return GitResult(
+            False,
+            detail=(
+                f"Push timed out after {PUSH_TIMEOUT_SECONDS}s. Check the "
+                f"remote is reachable and your credentials are set up."
+            ),
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return GitResult(False, detail=str(exc))
+
+    if result.returncode != 0:
+        return GitResult(False, detail=(result.stderr or result.stdout).strip())
+    return GitResult(True, detail=f"Pushed {branch} to {name}.")
 
 
 def initialize_brain(root: Path, template: Path) -> GitResult:

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">Backup</p>
+  <h1>Somewhere other than this disk</h1>
+  <p class="lede">
+    Every save commits, so a bad edit is recoverable. A dead disk is not.
+    Pushing the brain to a remote is what turns it from a folder into
+    something that survives the machine it's on.
+  </p>
+</div>
+
+{% if not tracked %}
+<div class="notice">
+  <p>
+    <span class="notice-title">This brain isn't a git repository.</span>
+    There is nothing to push. Run <code>git init</code> inside
+    <span class="path">{{ brain_path }}</span> first.
+  </p>
+</div>
+
+{% else %}
+
+<div class="notice">
+  <p>
+    <span class="notice-title">Pushing publishes everything in the brain.</span>
+    Git has no concept of visibility, so
+    {% if private_notes %}
+      your {{ private_notes }} private note{{ private_notes|pluralize }} and
+      your identity files go
+    {% else %}
+      your identity files — including <code>voice.md</code> — go
+    {% endif %}
+    wherever this remote points, in full, along with every version in the
+    history.
+  </p>
+  <p>
+    <strong>Use a private repository.</strong> Nothing here can check that
+    for you, and a push cannot be taken back — anything sent to a public
+    remote should be treated as public from then on, even if you delete it
+    afterwards.
+  </p>
+</div>
+
+<h2>Remote</h2>
+
+{% if remote %}
+<ul class="rows">
+  <li><div class="row">
+    <span class="row-title"><span class="path">{{ remote }}</span></span>
+    {% if unpushed is None %}
+      <span class="tag tag--alert">never pushed</span>
+    {% elif unpushed %}
+      <span class="tag tag--alert">{{ unpushed }} unpushed</span>
+    {% else %}
+      <span class="tag tag--good">up to date</span>
+    {% endif %}
+  </div></li>
+</ul>
+
+<div class="actions">
+  <form method="post" action="{% url 'dashboard:backup_push' %}"
+        onsubmit="return confirm('Push the whole brain — including private notes and your voice file — to {{ remote|escapejs }}?\n\nMake sure that repository is private. This cannot be undone.');">
+    {% csrf_token %}
+    <button type="submit" class="btn">Push now</button>
+  </form>
+  <form method="post" action="{% url 'dashboard:backup_remove_remote' %}"
+        onsubmit="return confirm('Remove the backup remote? Nothing already pushed is deleted.');">
+    {% csrf_token %}
+    <button type="submit" class="btn btn--ghost">Remove remote</button>
+  </form>
+</div>
+
+<h2>Change it</h2>
+{% else %}
+<h2>Set one</h2>
+{% endif %}
+
+<form method="post" action="{% url 'dashboard:backup_set_remote' %}">
+  {% csrf_token %}
+  <div class="field">
+    <label for="{{ form.url.id_for_label }}">{{ form.url.label }}</label>
+    {{ form.url }}
+    <p class="help">{{ form.url.help_text }}</p>
+  </div>
+  <div class="actions">
+    <button type="submit" class="btn btn--ghost">Save remote</button>
+  </div>
+</form>
+
+<h2>Setting it up</h2>
+<p>
+  Create an empty <strong>private</strong> repository, then paste its URL
+  above. SSH is the smoother path — an HTTPS remote needs a credential
+  helper already configured, because this app will never prompt you for a
+  password. Git is run with prompting disabled on purpose: a request that
+  hangs waiting for input nobody can type looks exactly like the app
+  freezing.
+</p>
+<p class="help">
+  If a push fails with an authentication error, run
+  <code>git push</code> once from a terminal inside
+  <span class="path">{{ brain_path }}</span>. Whatever it needs from you,
+  it can ask for there.
+</p>
+
+{% if commits %}
+<h2>Latest local history</h2>
+<ul class="log">
+  {% for commit in commits %}
+  <li>
+    <span class="sha">{{ commit.sha }}</span>
+    <span>{{ commit.subject }}</span>
+    <span class="when">{{ commit.when }}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% endif %}
+{% endblock %}

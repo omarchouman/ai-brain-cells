@@ -60,6 +60,13 @@
         <li><a href="{% url 'dashboard:skills' %}" {% if nav == 'skills' %}aria-current="page"{% endif %}>Skills</a></li>
       </ul>
     </div>
+
+    <div class="nav-group">
+      <p class="nav-label">Safety</p>
+      <ul class="nav-list">
+        <li><a href="{% url 'dashboard:backup' %}" {% if nav == 'backup' %}aria-current="page"{% endif %}>Backup</a></li>
+      </ul>
+    </div>
     {% endif %}
   </nav>
 
