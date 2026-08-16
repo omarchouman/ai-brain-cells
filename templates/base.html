@@ -1,0 +1,41 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ page_title|default:"Brain" }}{% endblock %} — ai-brain-cells</title>
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>&#129504;</text></svg>">
+</head>
+<body>
+<div class="shell">
+
+  <nav class="sidebar">
+    <a class="brandmark" href="{% url 'dashboard:overview' %}">ai&#8209;brain&#8209;<em>cells</em></a>
+    <p class="brand-sub">your context, in markdown</p>
+
+    {% if brain_exists %}
+    <div class="nav-group">
+      <p class="nav-label">Brain</p>
+      <ul class="nav-list">
+        <li><a href="{% url 'dashboard:overview' %}" {% if nav == 'overview' %}aria-current="page"{% endif %}>Overview</a></li>
+      </ul>
+    </div>
+    {% endif %}
+  </nav>
+
+  <main class="main">
+    <div class="{% block wrapclass %}wrap{% endblock %}">
+      {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+</div>
+</body>
+</html>

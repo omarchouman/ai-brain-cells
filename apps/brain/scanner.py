@@ -11,6 +11,7 @@ Nothing here raises on a bad file. A file that cannot be parsed becomes a
 attention instead of a 500.
 """
 
+import time
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -31,6 +32,11 @@ from .taxonomy import read_topics
 
 # path -> (mtime_ns, size, parsed entity or BrokenFile)
 _CACHE: dict[str, tuple[int, int, Any]] = {}
+
+# How recently a file must have changed before its fingerprint stops being
+# trustworthy. Two seconds comfortably covers filesystems that round
+# timestamps to the second.
+RACY_WINDOW_NS = 2_000_000_000
 
 
 def clear_cache() -> None:
@@ -82,7 +88,18 @@ class Brain:
 
 
 def _load(path: Path, loader: Callable[[Path], Any], use_cache: bool) -> Any:
-    """Parse `path`, reusing the cached result while mtime and size hold."""
+    """Parse `path`, reusing the cached result while mtime and size hold.
+
+    A (mtime, size) fingerprint alone is not enough. Two writes close
+    together can land on the same timestamp, and an edit that replaces text
+    with text of the same length leaves the size identical — so a file
+    edited moments ago can look untouched. Anything modified inside the racy
+    window is therefore re-read rather than trusted, which is the same
+    precaution git takes with its index.
+
+    The cost is confined to files you just touched. Steady-state browsing
+    still pays only a stat() per file.
+    """
     try:
         stat = path.stat()
     except OSError as exc:
@@ -92,7 +109,8 @@ def _load(path: Path, loader: Callable[[Path], Any], use_cache: bool) -> Any:
     fingerprint = (stat.st_mtime_ns, stat.st_size)
     if use_cache:
         cached = _CACHE.get(key)
-        if cached and cached[:2] == fingerprint:
+        settled = time.time_ns() - stat.st_mtime_ns > RACY_WINDOW_NS
+        if cached and cached[:2] == fingerprint and settled:
             return cached[2]
 
     try:

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">Overview</p>
+  <h1>Your brain</h1>
+  <p class="lede">
+    {% if brain.is_empty %}
+      Nothing in it yet. The fastest way to make it useful is to write your
+      voice file, then three or four takes you already hold.
+    {% else %}
+      {{ note_total }} note{{ note_total|pluralize }} across
+      {{ brain.projects|length }} project{{ brain.projects|length|pluralize }},
+      readable by any agent that asks.
+    {% endif %}
+  </p>
+</div>
+
+<div class="figures">
+  {% for figure in figures %}
+  <div class="figure">
+    <span class="figure-n {% if not figure.count %}is-zero{% endif %}">{{ figure.count }}</span>
+    <span class="figure-label">{{ figure.label }}</span>
+  </div>
+  {% endfor %}
+</div>
+
+{% if brain.broken %}
+<h2>Needs a look</h2>
+<div class="notice">
+  <p><span class="notice-title">{{ brain.broken|length }} file{{ brain.broken|length|pluralize }} couldn't be read.</span></p>
+  <p>Agents skip these entirely, so they're invisible to your brain until fixed.</p>
+</div>
+<ul class="rows">
+  {% for item in brain.broken %}
+  <li><div class="row">
+    <span class="row-title"><strong>{{ item.name }}</strong><br><span class="topics">{{ item.message }}</span></span>
+  </div></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<h2>Identity</h2>
+<p>
+  These three load on every task an agent does in your name. They matter more
+  than any single note.
+</p>
+<ul class="rows">
+  {% for doc in identity %}
+  <li><div class="row">
+    <span class="row-title"><strong>{{ doc.title }}</strong> — {{ doc.blurb }}</span>
+    {% if doc.written %}
+      <span class="tag tag--good">written</span>
+    {% elif doc.exists %}
+      <span class="tag tag--alert">still a template</span>
+    {% else %}
+      <span class="tag tag--quiet">missing</span>
+    {% endif %}
+  </div></li>
+  {% endfor %}
+</ul>
+
+<h2>Projects</h2>
+{% if brain.projects %}
+<ul class="rows">
+  {% for card in brain.projects %}
+  <li><div class="row">
+    <span class="row-title">
+      <strong>{{ card.title }}</strong>
+      {% if card.topics %}<br><span class="topics">{% for topic in card.topics %}<span>{{ topic }}</span>{% endfor %}</span>{% endif %}
+    </span>
+    <span class="tag tag--type">{{ card.status }}</span>
+    {% if card.is_stale %}
+      <span class="tag tag--alert">unverified {{ card.days_since_verified }}d</span>
+    {% else %}
+      <span class="row-meta">checked {{ card.last_verified }}</span>
+    {% endif %}
+  </div></li>
+  {% endfor %}
+</ul>
+{% if stale %}
+<div class="notice">
+  <p>
+    <span class="notice-title">{{ stale|length }} card{{ stale|pluralize }} past the 45-day mark.</span>
+    Agents will stop quoting their numbers as current — which is the point, but
+    it also means a stale card quietly stops being useful.
+  </p>
+</div>
+{% endif %}
+{% else %}
+<div class="empty">
+  <p>No project cards yet.</p>
+  <p>A card is how an agent knows what you're building, where it stands, and what
+     numbers are real. One card per project is usually enough.</p>
+</div>
+{% endif %}
+
+<h2>History</h2>
+{% if not tracked %}
+<div class="notice">
+  <p>
+    <span class="notice-title">This brain isn't a git repository.</span>
+    Your files are safe, but nothing is being versioned — a bad edit can't be
+    undone. Run <code>git init</code> inside it to get history back.
+  </p>
+</div>
+{% elif commits %}
+<ul class="log">
+  {% for commit in commits %}
+  <li>
+    <span class="sha">{{ commit.sha }}</span>
+    <span>{{ commit.subject }}</span>
+    <span class="when">{{ commit.when }}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="empty"><p>No commits yet.</p></div>
+{% endif %}
+
+<p class="footnote">
+  Living at <span class="path">{{ brain_path }}</span> — edit it here, in your
+  editor, or in a terminal. All three are equally valid.
+</p>
+{% endblock %}

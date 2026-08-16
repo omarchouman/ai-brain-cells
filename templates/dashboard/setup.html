@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">First run</p>
+  <h1>Let's give you somewhere to think.</h1>
+  <p class="lede">
+    Your brain is a folder of plain markdown in its own git repository. Nothing
+    about it is locked to this dashboard — you can edit it in VS Code, read it
+    in a terminal, and delete this app without losing a word of it.
+  </p>
+</div>
+
+<h2>What gets created</h2>
+
+<ul class="rows">
+  <li><div class="row"><span class="row-title"><strong>identity/</strong> — who you are, how you write, what you believe</span><span class="row-meta">3 files</span></div></li>
+  <li><div class="row"><span class="row-title"><strong>knowledge/</strong> — takes, stories, lessons, facts</span><span class="row-meta">empty</span></div></li>
+  <li><div class="row"><span class="row-title"><strong>projects/</strong> — one card per thing you're building</span><span class="row-meta">empty</span></div></li>
+  <li><div class="row"><span class="row-title"><strong>lenses/</strong> — named retrieval scopes</span><span class="row-meta">empty</span></div></li>
+  <li><div class="row"><span class="row-title"><strong>CLAUDE.md</strong> — the contract every agent reads first</span><span class="row-meta">the rules</span></div></li>
+</ul>
+
+<div class="notice notice--plain">
+  <p><span class="notice-title">It ships with zero notes, on purpose.</span></p>
+  <p>
+    An empty brain that is genuinely yours beats a seeded one you have to clean
+    out first. The identity files come as prompts, not placeholders to keep.
+  </p>
+</div>
+
+<h2>Where it goes</h2>
+<p class="path">{{ brain_path }}</p>
+<p>
+  Created from the template at <span class="path">{{ template_path }}</span>,
+  then initialised as its own git repository with a first commit. This project's
+  repo ignores that folder, so your notes and this tool's code keep separate
+  histories.
+</p>
+
+<form method="post" action="{% url 'dashboard:create_brain' %}" class="actions">
+  {% csrf_token %}
+  <button type="submit" class="btn">Create my brain</button>
+</form>
+{% endblock %}

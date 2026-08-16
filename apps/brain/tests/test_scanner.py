@@ -1,5 +1,6 @@
 import os
 import tempfile
+import time
 from pathlib import Path
 
 from django.test import SimpleTestCase
@@ -163,14 +164,46 @@ class ScannerCacheTests(SimpleTestCase):
         first = scan_brain(self.root)
         self.assertEqual(first.notes[0].title, "First title")
 
-        text = self.path.read_text().replace("First title", "Second title")
-        self.path.write_text(text)
-        # Force a distinct mtime; a same-second edit must still be seen.
-        stat = self.path.stat()
-        os.utime(self.path, (stat.st_atime, stat.st_mtime + 10))
+        self.path.write_text(
+            self.path.read_text().replace("First title", "Other title")
+        )
 
         second = scan_brain(self.root)
-        self.assertEqual(second.notes[0].title, "Second title")
+        self.assertEqual(second.notes[0].title, "Other title")
+
+    def _retitle_keeping_fingerprint(self, new_title: str, mtime_ns: int) -> None:
+        """Rewrite the title and restore the file's exact (mtime, size).
+
+        "First title" and "Other title" are the same length, so after putting
+        the timestamp back the fingerprint is byte-for-byte what the cache
+        already holds. This is the state a naive cache cannot distinguish
+        from "nothing happened".
+        """
+        self.path.write_text(
+            self.path.read_text().replace("First title", new_title)
+        )
+        os.utime(self.path, ns=(mtime_ns, mtime_ns))
+
+    def test_picks_up_a_recent_edit_hidden_behind_an_identical_fingerprint(self):
+        scan_brain(self.root)
+        just_now = self.path.stat().st_mtime_ns
+
+        self._retitle_keeping_fingerprint("Other title", just_now)
+
+        # Modified within the racy window, so the fingerprint is not trusted.
+        self.assertEqual(scan_brain(self.root).notes[0].title, "Other title")
+
+    def test_trusts_the_fingerprint_once_a_file_has_settled(self):
+        """The optimisation has to actually optimise, or this is a slow scan."""
+        long_ago = time.time_ns() - 600 * 1_000_000_000
+        os.utime(self.path, ns=(long_ago, long_ago))
+        scan_brain(self.root)
+
+        self._retitle_keeping_fingerprint("Other title", long_ago)
+
+        # Outside the racy window with an unchanged fingerprint, so the file
+        # is not re-read. Missing this edit is the trade the cache makes.
+        self.assertEqual(scan_brain(self.root).notes[0].title, "First title")
 
     def test_notices_a_deleted_file(self):
         scan_brain(self.root)
