@@ -1,0 +1,9 @@
+# The brain is its own git repo, versioned independently of this tool.
+brain/
+
+.venv/
+__pycache__/
+*.py[cod]
+.env
+db.sqlite3
+.DS_Store
