@@ -16,9 +16,19 @@
 
     {% if brain_exists %}
     <div class="nav-group">
-      <p class="nav-label">Brain</p>
       <ul class="nav-list">
         <li><a href="{% url 'dashboard:overview' %}" {% if nav == 'overview' %}aria-current="page"{% endif %}>Overview</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <p class="nav-label">Knowledge</p>
+      <ul class="nav-list">
+        <li><a href="{% url 'dashboard:notes' %}" {% if nav == 'notes' %}aria-current="page"{% endif %}>All notes</a></li>
+        <li><a href="{% url 'dashboard:notes' %}?type=take">Takes<span class="nav-count">{{ counts.take }}</span></a></li>
+        <li><a href="{% url 'dashboard:notes' %}?type=story">Stories<span class="nav-count">{{ counts.story }}</span></a></li>
+        <li><a href="{% url 'dashboard:notes' %}?type=lesson">Lessons<span class="nav-count">{{ counts.lesson }}</span></a></li>
+        <li><a href="{% url 'dashboard:notes' %}?type=fact">Facts<span class="nav-count">{{ counts.fact }}</span></a></li>
       </ul>
     </div>
     {% endif %}
@@ -37,5 +47,6 @@
   </main>
 
 </div>
+{% block scripts %}{% endblock %}
 </body>
 </html>

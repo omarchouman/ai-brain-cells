@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block wrapclass %}wrap wrap--wide{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">{% if note %}Editing {{ note.type }}{% else %}New note{% endif %}</p>
+  <h1>{% if note %}{{ note.title }}{% else %}Write a note{% endif %}</h1>
+  {% if note %}
+    <p class="lede path">{{ note.path.name }}</p>
+  {% endif %}
+</div>
+
+{% if form.non_field_errors %}
+  <ul class="errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+{% endif %}
+
+<form method="post" id="note-form">
+  {% csrf_token %}
+  <div class="editor-grid">
+
+    <div>
+      <div class="field">
+        <label for="{{ form.title.id_for_label }}">Title</label>
+        {{ form.title }}
+        <p class="help">{{ form.title.help_text }}</p>
+        {% if form.title.errors %}<ul class="errors">{% for e in form.title.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="{{ form.type.id_for_label }}">Type</label>
+          {{ form.type }}
+          {% if form.type.errors %}<ul class="errors">{% for e in form.type.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+        <div class="field">
+          <label for="{{ form.date.id_for_label }}">From</label>
+          {{ form.date }}
+          {% if form.date.errors %}<ul class="errors">{% for e in form.date.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+        <div class="field">
+          <label for="{{ form.visibility.id_for_label }}">Visibility</label>
+          {{ form.visibility }}
+          {% if form.visibility.errors %}<ul class="errors">{% for e in form.visibility.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+      </div>
+      <p class="help">{{ form.visibility.help_text }}</p>
+
+      <div class="field">
+        <p class="field-legend">Topics</p>
+        <div class="checks">{{ form.topics }}</div>
+        <p class="help">{{ form.topics.help_text }}</p>
+        {% if form.topics.errors %}<ul class="errors">{% for e in form.topics.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      {% if form.projects.field.choices %}
+      <div class="field">
+        <p class="field-legend">Projects this touches</p>
+        <div class="checks">{{ form.projects }}</div>
+      </div>
+      {% endif %}
+
+      <div class="field">
+        <label for="{{ form.body.id_for_label }}">Body</label>
+        {{ form.body }}
+        <p class="help">{{ form.body.help_text }}</p>
+        {% if form.body.errors %}<ul class="errors">{% for e in form.body.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="field field--verbatim">
+        <label for="{{ form.verbatim.id_for_label }}">In my words</label>
+        {{ form.verbatim }}
+        <p class="help">{{ form.verbatim.help_text }}</p>
+      </div>
+
+      <div class="field">
+        <label for="{{ form.source_url.id_for_label }}">Source link</label>
+        {{ form.source_url }}
+        <p class="help">{{ form.source_url.help_text }}</p>
+        {% if form.source_url.errors %}<ul class="errors">{% for e in form.source_url.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+    </div>
+
+    <div class="preview-col">
+      <p class="preview-label">As an agent reads it</p>
+      <div class="preview-pane" id="preview"><p class="help">Start typing.</p></div>
+    </div>
+
+  </div>
+
+  <div class="form-foot">
+    <button type="submit" class="btn">{% if note %}Save{% else %}Write it{% endif %}</button>
+    <a class="btn btn--ghost" href="{% url 'dashboard:notes' %}">Back to notes</a>
+    <span class="spacer"></span>
+  </div>
+</form>
+
+{% if note %}
+<form method="post" action="{% url 'dashboard:note_delete' note_id=note.id %}"
+      onsubmit="return confirm('Delete this note? If you have changed your mind rather than made a mistake, superseding it keeps the old position as history.');">
+  {% csrf_token %}
+  <div class="actions">
+    <button type="submit" class="btn btn--danger">Delete</button>
+    <span class="help">Changed your mind instead of made a mistake? Supersede keeps the history.</span>
+  </div>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const form = document.getElementById("note-form");
+  const pane = document.getElementById("preview");
+  const body = document.getElementById("{{ form.body.id_for_label }}");
+  const verbatim = document.getElementById("{{ form.verbatim.id_for_label }}");
+  const token = form.querySelector("[name=csrfmiddlewaretoken]").value;
+  let timer = null;
+
+  async function refresh() {
+    const payload = new URLSearchParams({
+      body: body.value,
+      verbatim: verbatim.value,
+      csrfmiddlewaretoken: token,
+    });
+    try {
+      const response = await fetch("{% url 'dashboard:preview' %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": token },
+        body: payload,
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      pane.innerHTML = data.html || '<p class="help">Nothing yet.</p>';
+    } catch (e) {
+      /* Preview is a convenience. Losing it must never block writing. */
+    }
+  }
+
+  function schedule() {
+    clearTimeout(timer);
+    timer = setTimeout(refresh, 250);
+  }
+
+  body.addEventListener("input", schedule);
+  verbatim.addEventListener("input", schedule);
+  if (body.value.trim()) refresh();
+})();
+</script>
+{% endblock %}

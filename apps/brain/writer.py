@@ -55,11 +55,17 @@ def identity_path(root: Path, doc: IdentityDoc) -> Path:
     return Path(root) / "identity" / f"{doc.slug}.md"
 
 
-def assign_note_id(root: Path, note: Note) -> Note:
-    """Give a new note an id, disambiguating if that filename is taken."""
+def assign_note_id(root: Path, note: Note, keep_id: str | None = None) -> Note:
+    """Give a note the id its type, date and title imply.
+
+    `keep_id` is the note's current id when editing. Without it, saving a
+    note whose title did not change would collide with its own file on disk
+    and get bumped to `-2`.
+    """
     note.id = make_note_id(note.type, note.date, note.title)
-    target = unique_path(note_path(root, note))
-    note.id = target.stem
+    if keep_id and note.id == keep_id:
+        return note
+    note.id = unique_path(note_path(root, note)).stem
     return note
 
 

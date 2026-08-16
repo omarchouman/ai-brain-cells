@@ -8,6 +8,9 @@
     {% if brain.is_empty %}
       Nothing in it yet. The fastest way to make it useful is to write your
       voice file, then three or four takes you already hold.
+    </p>
+    <p class="actions">
+      <a class="btn" href="{% url 'dashboard:note_new' %}?type=take">Write your first take</a>
     {% else %}
       {{ note_total }} note{{ note_total|pluralize }} across
       {{ brain.projects|length }} project{{ brain.projects|length|pluralize }},
@@ -18,10 +21,10 @@
 
 <div class="figures">
   {% for figure in figures %}
-  <div class="figure">
+  <a class="figure" href="{% url 'dashboard:notes' %}?type={{ figure.type }}">
     <span class="figure-n {% if not figure.count %}is-zero{% endif %}">{{ figure.count }}</span>
     <span class="figure-label">{{ figure.label }}</span>
-  </div>
+  </a>
   {% endfor %}
 </div>
 

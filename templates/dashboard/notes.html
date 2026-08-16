@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block wrapclass %}wrap wrap--wide{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">Knowledge</p>
+  <h1>{{ heading }}</h1>
+  <p class="lede">
+    Atomic notes are the retrieval workhorse. One idea each, five to fifteen
+    lines, titled as a claim so an agent can tell from the index alone whether
+    it's worth opening.
+  </p>
+</div>
+
+<div class="filterbar">
+  <a class="pill" href="{% url 'dashboard:notes' %}?status={{ selected_status }}"
+     aria-current="{% if not selected_type %}true{% else %}false{% endif %}">all</a>
+  {% for type, label in type_labels.items %}
+    <a class="pill" href="{% url 'dashboard:notes' %}?type={{ type }}&status={{ selected_status }}"
+       aria-current="{% if selected_type == type %}true{% else %}false{% endif %}">{{ label }}</a>
+  {% endfor %}
+  <span class="spacer"></span>
+  {% if selected_status == 'current' %}
+    {% if superseded_count %}
+      <a class="pill" href="{% url 'dashboard:notes' %}?type={{ selected_type }}&status=superseded">superseded ({{ superseded_count }})</a>
+    {% endif %}
+  {% else %}
+    <a class="pill" href="{% url 'dashboard:notes' %}?type={{ selected_type }}&status=current">back to current</a>
+  {% endif %}
+  <a class="btn" href="{% url 'dashboard:note_new' %}{% if selected_type %}?type={{ selected_type }}{% endif %}">Write a note</a>
+</div>
+
+{% if selected_topic %}
+<p class="help">
+  Filtered to <strong>{{ selected_topic }}</strong>.
+  <a href="{% url 'dashboard:notes' %}?type={{ selected_type }}&status={{ selected_status }}">Clear</a>
+</p>
+{% endif %}
+
+{% if notes %}
+<ul class="rows">
+  {% for note in notes %}
+  <li>
+    <a class="row" href="{% url 'dashboard:note_edit' note_id=note.id %}">
+      <span class="row-title">
+        <strong>{{ note.title }}</strong>
+        {% if note.topics %}<br><span class="topics">{% for topic in note.topics %}<span>{{ topic }}</span>{% endfor %}</span>{% endif %}
+      </span>
+      {% if note.verbatim %}<span class="tag tag--alert" title="Carries your own words">voice</span>{% endif %}
+      {% if note.visibility == 'private' %}<span class="tag tag--quiet">private</span>{% endif %}
+      {% if note.status == 'superseded' %}<span class="tag tag--quiet">superseded</span>{% endif %}
+      <span class="tag tag--type">{{ note.type }}</span>
+      <span class="row-meta">{{ note.date }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% elif selected_status == 'superseded' %}
+<div class="empty">
+  <p>Nothing superseded yet.</p>
+  <p>When you change your mind about a take, superseding it keeps the old
+     position as history instead of erasing it — so your brain records how your
+     thinking moved, not just where it landed.</p>
+</div>
+{% elif brain.notes %}
+<div class="empty"><p>No notes match that filter.</p></div>
+{% else %}
+<div class="empty">
+  <p>No notes yet.</p>
+  <p>The fastest start is three or four <strong>takes</strong> you already hold —
+     positions you'd defend in an argument. Those are what make generated writing
+     sound like you rather than like anyone.</p>
+  <p><a class="btn" href="{% url 'dashboard:note_new' %}?type=take">Write your first take</a></p>
+</div>
+{% endif %}
+{% endblock %}
