@@ -4,6 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ page_title|default:"Brain" }}{% endblock %} — ai-brain-cells</title>
+<script>
+  // Applied before first paint so a dark-theme user never sees a light flash.
+  // No stored choice means no attribute, which lets the CSS follow the OS.
+  (function () {
+    try {
+      var saved = localStorage.getItem("abc-theme");
+      if (saved === "dark" || saved === "light") {
+        document.documentElement.setAttribute("data-theme", saved);
+      }
+    } catch (e) { /* private mode: fall back to the OS preference */ }
+  })();
+</script>
 <link rel="stylesheet" href="{% static 'css/app.css' %}">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>&#129504;</text></svg>">
 </head>
@@ -65,19 +77,24 @@
     {% endif %}
   </nav>
 
-  <main class="main">
-    <div class="{% block wrapclass %}wrap{% endblock %}">
-      {% if messages %}
-      <ul class="messages">
-        {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
-      </ul>
-      {% endif %}
+  <div class="content">
+    {% include "dashboard/_topbar.html" %}
 
-      {% block content %}{% endblock %}
-    </div>
-  </main>
+    <main class="main">
+      <div class="{% block wrapclass %}wrap{% endblock %}">
+        {% if messages %}
+        <ul class="messages">
+          {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
 
 </div>
+<script src="{% static 'js/topbar.js' %}" defer></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
