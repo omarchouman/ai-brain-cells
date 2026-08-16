@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block wrapclass %}wrap wrap--wide{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">Taxonomy</p>
+  <h1>Your topics</h1>
+  <p class="lede">
+    The controlled vocabulary every note tags itself with. This is the key
+    retrieval runs on, which is why it's a fixed list rather than free text —
+    ad-hoc tags fragment a brain until nothing finds anything.
+  </p>
+</div>
+
+<div class="editor-grid">
+  <div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <label for="{{ form.topics.id_for_label }}">One per line</label>
+        {{ form.topics }}
+        <p class="help">{{ form.topics.help_text }}</p>
+        {% if form.topics.errors %}<ul class="errors">{% for e in form.topics.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+      <div class="form-foot">
+        <button type="submit" class="btn">Save taxonomy</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="preview-col">
+    <p class="preview-label">In use</p>
+    <div class="preview-pane">
+      {% if usage %}
+      <ul class="log">
+        {% for topic, count in usage %}
+        <li>
+          {% if count %}
+            <a href="{% url 'dashboard:notes' %}?topic={{ topic }}">{{ topic }}</a>
+          {% else %}
+            <span class="help">{{ topic }}</span>
+          {% endif %}
+          <span class="when">{{ count }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="help">No topics yet.</p>
+      {% endif %}
+    </div>
+    {% if unused %}
+    <p class="help">
+      {{ unused|length }} topic{{ unused|pluralize }} nothing uses yet. That's
+      fine while you're starting; worth pruning once it isn't.
+    </p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="notice notice--plain">
+  <p>
+    <span class="notice-title">Removing a topic notes still carry is refused.</span>
+    Those notes would fail validation and drop out of retrieval silently —
+    they'd still be on disk, just invisible. Retag them first.
+  </p>
+</div>
+{% endblock %}

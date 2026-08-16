@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block wrapclass %}wrap wrap--wide{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">Lenses</p>
+  <h1>Named scopes</h1>
+  <p class="lede">
+    A lens is a saved filter you can invoke by name — “use my building-in-public
+    lens”. It sets where an agent looks first, not where it's allowed to look.
+  </p>
+</div>
+
+<div class="filterbar">
+  <span class="row-meta">{{ lenses|length }} lens{{ lenses|length|pluralize:"es" }}</span>
+  <span class="spacer"></span>
+  <a class="btn" href="{% url 'dashboard:lens_new' %}">Add a lens</a>
+</div>
+
+{% if lenses %}
+<ul class="rows">
+  {% for lens in lenses %}
+  <li>
+    <a class="row" href="{% url 'dashboard:lens_edit' name=lens.name %}">
+      <span class="row-title">
+        <strong>{{ lens.name }}</strong>
+        <br><span class="topics">{% for topic in lens.topics %}<span>{{ topic }}</span>{% endfor %}{% if not lens.topics %}<span>all topics</span>{% endif %}</span>
+      </span>
+      <span class="row-meta">{{ lens.types|join:" · " }}</span>
+      <span class="tag tag--type">{{ lens.visibility_ceiling }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="empty">
+  <p>No lenses yet — and you probably don't need one until the brain is bigger.</p>
+  <p>
+    With a dozen notes an agent can read the whole index. Lenses start earning
+    their keep somewhere past a hundred, when “everything about X” stops being a
+    small enough answer.
+  </p>
+  <p><a class="btn btn--ghost" href="{% url 'dashboard:lens_new' %}">Add one anyway</a></p>
+</div>
+{% endif %}
+{% endblock %}

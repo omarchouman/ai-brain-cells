@@ -14,12 +14,21 @@ from apps.brain.writer import (
     delete_entity,
     delete_note,
     save_identity,
+    save_lens,
     save_note,
     save_project,
+    save_taxonomy,
 )
 
 from .access import brain_exists, brain_root, current_brain
-from .forms import TYPE_HELP, IdentityForm, NoteForm, ProjectForm
+from .forms import (
+    TYPE_HELP,
+    IdentityForm,
+    LensForm,
+    NoteForm,
+    ProjectForm,
+    TaxonomyForm,
+)
 from .rendering import render_markdown, split_verbatim
 
 TYPE_LABELS = {
@@ -408,6 +417,179 @@ def project_delete(request: HttpRequest, slug: str) -> HttpResponse:
     )
     _report(request, result, f"Deleted project: {card.title}")
     return redirect("dashboard:projects")
+
+
+# ---------------------------------------------------------- taxonomy, lenses
+
+
+def _topic_usage(brain) -> dict[str, int]:
+    usage = {topic: 0 for topic in brain.topics}
+    for item in [*brain.notes, *brain.projects]:
+        for topic in item.topics:
+            usage[topic] = usage.get(topic, 0) + 1
+    return usage
+
+
+@needs_brain
+def taxonomy(request: HttpRequest) -> HttpResponse:
+    brain = current_brain()
+    usage = _topic_usage(brain)
+
+    if request.method == "POST":
+        form = TaxonomyForm(request.POST)
+        if form.is_valid():
+            kept = form.cleaned_data["topics"]
+            orphaned = sorted(
+                topic
+                for topic in brain.topics
+                if topic not in kept and usage.get(topic)
+            )
+            if orphaned:
+                # Removing a tag that notes still carry would make every one
+                # of those notes fail validation and vanish from retrieval.
+                # Refusing is kinder than letting the brain quietly shrink.
+                form.add_error(
+                    "topics",
+                    "Still in use: "
+                    + ", ".join(f"{t} ({usage[t]})" for t in orphaned)
+                    + ". Retag those notes first, or keep the topic.",
+                )
+            else:
+                result = save_taxonomy(brain_root(), kept)
+                _report(request, result, "Saved taxonomy")
+                return redirect("dashboard:taxonomy")
+    else:
+        form = TaxonomyForm(initial={"topics": "\n".join(brain.topics)})
+
+    return render(
+        request,
+        "dashboard/taxonomy.html",
+        {
+            "nav": "taxonomy",
+            "page_title": "Taxonomy",
+            "brain": brain,
+            "counts": _nav_counts(brain),
+            "form": form,
+            "usage": sorted(usage.items()),
+            "unused": sorted(t for t, n in usage.items() if not n),
+        },
+    )
+
+
+def _lens_or_404(brain, name):
+    lens = brain.lens(name)
+    if lens is None:
+        raise Http404("No lens with that name.")
+    return lens
+
+
+@needs_brain
+def lenses(request: HttpRequest) -> HttpResponse:
+    brain = current_brain()
+    return render(
+        request,
+        "dashboard/lenses.html",
+        {
+            "nav": "lenses",
+            "page_title": "Lenses",
+            "brain": brain,
+            "counts": _nav_counts(brain),
+            "lenses": brain.lenses,
+        },
+    )
+
+
+@needs_brain
+def lens_new(request: HttpRequest) -> HttpResponse:
+    brain = current_brain()
+    if request.method == "POST":
+        form = LensForm(request.POST, brain=brain)
+        if form.is_valid():
+            lens = form.to_lens()
+            if brain.lens(lens.name):
+                form.add_error("name", "You already have a lens with that name.")
+            else:
+                result = save_lens(brain_root(), lens)
+                _report(request, result, f"Saved lens: {lens.name}")
+                return redirect("dashboard:lens_edit", name=lens.name)
+    else:
+        form = LensForm(
+            brain=brain,
+            initial={"visibility_ceiling": "public", "types": list(NOTE_TYPES)},
+        )
+    return render(
+        request,
+        "dashboard/lens_form.html",
+        {
+            "nav": "lenses",
+            "page_title": "New lens",
+            "brain": brain,
+            "counts": _nav_counts(brain),
+            "form": form,
+            "lens": None,
+        },
+    )
+
+
+@needs_brain
+def lens_edit(request: HttpRequest, name: str) -> HttpResponse:
+    brain = current_brain()
+    lens = _lens_or_404(brain, name)
+
+    if request.method == "POST":
+        form = LensForm(request.POST, brain=brain)
+        if form.is_valid():
+            updated = form.to_lens(existing=lens)
+            result = save_lens(brain_root(), updated, previous_path=lens.path)
+            _report(request, result, f"Saved lens: {updated.name}")
+            return redirect("dashboard:lens_edit", name=updated.name)
+    else:
+        form = LensForm(
+            brain=brain,
+            initial={
+                "name": lens.name,
+                "topics": lens.topics,
+                "types": lens.types,
+                "visibility_ceiling": lens.visibility_ceiling,
+                "body": lens.body,
+            },
+        )
+
+    return render(
+        request,
+        "dashboard/lens_form.html",
+        {
+            "nav": "lenses",
+            "page_title": lens.name,
+            "brain": brain,
+            "counts": _nav_counts(brain),
+            "form": form,
+            "lens": lens,
+            "matches": _lens_matches(brain, lens),
+        },
+    )
+
+
+def _lens_matches(brain, lens) -> list:
+    """What this lens would actually pull, so it isn't written blind."""
+    return [
+        note
+        for note in brain.notes
+        if note.status == "current"
+        and note.type in lens.types
+        and (not lens.topics or set(note.topics) & set(lens.topics))
+        and not (lens.visibility_ceiling == "public" and note.visibility == "private")
+    ]
+
+
+@require_POST
+@needs_brain
+def lens_delete(request: HttpRequest, name: str) -> HttpResponse:
+    brain = current_brain()
+    lens = _lens_or_404(brain, name)
+    result = delete_entity(brain_root(), lens.path, f"Delete lens: {lens.name}")
+    _report(request, result, f"Deleted lens: {lens.name}")
+    return redirect("dashboard:lenses")
 
 
 # ---------------------------------------------------------------- identity

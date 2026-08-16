@@ -45,6 +45,14 @@
         <li><a href="{% url 'dashboard:projects' %}" {% if nav == 'projects' %}aria-current="page"{% endif %}>Projects<span class="nav-count">{{ brain.projects|length }}</span></a></li>
       </ul>
     </div>
+
+    <div class="nav-group">
+      <p class="nav-label">Retrieval</p>
+      <ul class="nav-list">
+        <li><a href="{% url 'dashboard:taxonomy' %}" {% if nav == 'taxonomy' %}aria-current="page"{% endif %}>Taxonomy<span class="nav-count">{{ brain.topics|length }}</span></a></li>
+        <li><a href="{% url 'dashboard:lenses' %}" {% if nav == 'lenses' %}aria-current="page"{% endif %}>Lenses<span class="nav-count">{{ brain.lenses|length }}</span></a></li>
+      </ul>
+    </div>
     {% endif %}
   </nav>
 
