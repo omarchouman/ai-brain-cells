@@ -69,10 +69,16 @@ someone's writing.
 Installing skills touches `~/.claude/skills/`. That only ever happens on a
 POST the user initiated. No startup hooks, no implicit installs.
 
-**5. No build step, and dependencies stay small.** Django, PyYAML, Markdown.
-Hand-written CSS, no framework, no bundler, no Node. Adding a dependency
-needs a reason in the pull request description that survives the question
-"what would we write by hand instead?"
+**5. No build step, and dependencies stay small.** Django, PyYAML, Markdown,
+and `mcp`. Hand-written CSS, no framework, no bundler, no Node. Adding a
+dependency needs a reason in the pull request description that survives the
+question "what would we write by hand instead?"
+
+`mcp` is the one that answers it: MCP is a versioned wire protocol with a
+handshake and capability negotiation, and hand-rolling a client-facing
+protocol implementation is the kind of thing that works until a spec revision
+lands. It is also only imported by `brain_mcp/server.py` — the retrieval core
+and the whole Django side stay free of it.
 
 ## The brain contract
 
@@ -146,6 +152,11 @@ Comments explain *why*, not what — the code already says what.
 Plain `forms.Form`, never `ModelForm`, because there are no models. Keep
 views thin: parse the request, call into `apps/brain/`, render. Anything
 that touches files belongs in `apps/brain/`, not in a view.
+
+`apps/brain/` imports no Django, and it should stay that way — the MCP server
+reuses it without booting a web framework. `brain_mcp/retrieval.py` imports
+no MCP for the same reason: retrieval is testable, and reusable, without a
+server.
 
 ## Reporting something
 

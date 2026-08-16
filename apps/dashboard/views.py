@@ -35,6 +35,7 @@ from apps.brain.writer import (
 )
 
 from .access import brain_exists, brain_root, current_brain
+from .desktop import CONFIG_PATHS, describe as describe_desktop
 from .forms import (
     TYPE_HELP,
     CaptureForm,
@@ -661,6 +662,8 @@ def skills_page(request: HttpRequest) -> HttpResponse:
             "skills": skill_status(brain_root()),
             "install_dir": skills_install_dir(),
             "brain_path": brain_root(),
+            "desktop": describe_desktop(brain_root()),
+            "desktop_config_paths": CONFIG_PATHS,
         },
     )
 

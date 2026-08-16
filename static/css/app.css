@@ -701,3 +701,17 @@ h3 { font: 600 .98rem/1.3 var(--sans); margin: 1.6rem 0 .5rem; letter-spacing: -
 
 .checks--radio label { padding: .42rem .85rem; font-size: .85rem; }
 .checks--radio, .checks--radio > div { gap: .45rem; }
+
+/* ---------------------------------------------------------- config block */
+
+.config-block {
+  font: 400 .8rem/1.65 var(--mono);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 1rem 1.1rem;
+  margin: 0 0 .75rem;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--text);
+}

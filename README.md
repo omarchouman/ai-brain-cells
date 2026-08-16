@@ -4,9 +4,10 @@
 
 **Your context, your voice, your takes — in markdown, where Claude can read them.**
 
-A local dashboard for building a personal knowledge base that Claude Code
-reads as *you*: who you are, how you write, what you believe, what you're
-building, and what you've concluded.
+A local dashboard for building a personal knowledge base that Claude reads as
+*you*: who you are, how you write, what you believe, what you're building, and
+what you've concluded. Reachable from Claude Code and Claude Desktop, both
+entirely on your machine.
 
 Two pieces:
 
@@ -15,8 +16,8 @@ Two pieces:
   is readable, portable, and yours; delete this dashboard and the brain is
   untouched.
 - **This Django app** — a pleasant way to fill that repo in and keep it
-  consistent, plus the two Claude skills that teach agents how to read from
-  it and write to it.
+  consistent, plus the two Claude Code skills and the local MCP server that
+  let Claude read it.
 
 ## Where this came from
 
@@ -51,11 +52,11 @@ brain served to every agent you run anywhere, go use it.
 
 This one is deliberately smaller and more direct. One person, one machine,
 no server, no containers, no database at all — `runserver` and a folder of
-markdown. Three dependencies. The trims that follow from that:
+markdown. Four dependencies. The trims that follow from that:
 
 | BrainOutside | Here |
 |---|---|
-| Server, MCP, REST, API keys | Skills read the files directly |
+| Hosted server, remote MCP, REST, API keys | Skills read the files directly; a local MCP server for Claude Desktop |
 | Three enforced visibility tiers | One flag: `public` / `private` |
 | Agents propose, you approve in a queue | You write it; the feeder skill still proposes |
 | Mandatory provenance on every note | Optional — you're typing these yourself |
@@ -122,6 +123,32 @@ The parts worth knowing about are the guardrails, not the forms.
 - **Changing your mind supersedes rather than deletes.** The old note stays,
   marked as history and pointing at what replaced it.
 - **A file it cannot parse is listed with the reason**, not silently skipped.
+
+## Reaching it from Claude
+
+Two surfaces, both entirely local.
+
+**Claude Code** — install the two skills from the Skills page. They go to
+`~/.claude/skills/`, so your brain is available in every project you open.
+
+**Claude Desktop** — a local MCP server. The Skills page generates the
+`claude_desktop_config.json` block with every path already filled in for your
+machine; paste it, restart Desktop, done. Claude Desktop launches the server
+as a subprocess here, so nothing is hosted and your notes never leave this
+disk.
+
+The server is **read-only**. Desktop can draw on your brain but cannot change
+it — writing stays in the dashboard, where you see the change before it
+lands. Run it by hand to debug:
+
+```sh
+PYTHONPATH=. .venv/bin/python -m brain_mcp --brain ./brain
+```
+
+Retrieval is bounded rather than exhaustive: results are ranked so a limit of
+ten returns the best ten, listings carry snippets rather than bodies,
+everything paginates, and reading full notes is capped in count and size. The
+scaling limit for a tool an agent calls is the context window, not the CPU.
 
 ## The skills
 

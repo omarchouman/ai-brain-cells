@@ -1,14 +1,42 @@
 {% extends "base.html" %}
 {% block wrapclass %}wrap wrap--wide{% endblock %}
 
+{% block scripts %}
+<script>
+(function () {
+  const button = document.getElementById("copy-config");
+  const block = document.getElementById("desktop-config");
+  const status = document.getElementById("copy-status");
+  if (!button || !block) return;
+
+  button.addEventListener("click", async function () {
+    try {
+      await navigator.clipboard.writeText(block.textContent);
+      status.textContent = "Copied. Restart Claude Desktop after pasting.";
+    } catch (e) {
+      // Clipboard access can be denied; selecting the text still works.
+      const range = document.createRange();
+      range.selectNodeContents(block);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      status.textContent = "Selected — press \u2318C to copy.";
+    }
+  });
+})();
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="page-head">
   <p class="eyebrow">Claude skills</p>
   <h1>Reaching your brain</h1>
   <p class="lede">
-    Two skills teach Claude Code how to read from this brain and how to write
-    to it. Installing them at user level means they load in every project you
-    open — not only when Claude Code is pointed at the brain folder.
+    Two ways in. Skills teach <strong>Claude Code</strong> how to read from
+    this brain and write to it, installed at user level so they load in every
+    project you open. A local MCP server lets <strong>Claude Desktop</strong>
+    read it too. Both run on this machine; neither puts your notes anywhere
+    else.
   </p>
 </div>
 
@@ -62,6 +90,47 @@
   </p>
 </div>
 
+<h2>Claude Desktop</h2>
+<p>
+  Skills only reach Claude Code, because a skill is instructions and Claude
+  Code is what can read your disk. Claude Desktop reaches the brain a
+  different way: it launches a small server on this machine that reads
+  <span class="path">brain/</span> directly. Nothing is hosted, nothing is
+  exposed, and your notes never leave this disk.
+</p>
+
+<p class="help">
+  Paste this into <span class="path">{{ desktop_config_paths.macOS }}</span>
+  (on Windows, <span class="path">{{ desktop_config_paths.Windows }}</span>), or
+  open Claude Desktop → Developer → Edit Config. Every path is already filled
+  in for this machine.
+</p>
+
+<pre class="config-block" id="desktop-config">{{ desktop.config_json }}</pre>
+<div class="actions">
+  <button type="button" class="btn btn--ghost" id="copy-config">Copy config</button>
+  <span class="help" id="copy-status" aria-live="polite"></span>
+</div>
+
+<p class="help">
+  If you already have an <code>mcpServers</code> block, add just the
+  <code>ai-brain-cells</code> entry inside it
+  rather than replacing the whole file. <strong>Restart Claude Desktop
+  afterwards</strong> — it reads this config at launch.
+</p>
+
+<h3>If it doesn't appear</h3>
+<p>
+  Run the same command in a terminal. Claude Desktop only surfaces a failed
+  launch in its logs, whereas here the error prints straight out:
+</p>
+<pre class="config-block">{{ desktop.command_line }}</pre>
+<p class="help">
+  It should print one <code>serving brain at …</code> line to stderr and then
+  wait — that silence is the server holding the protocol channel open. Ctrl+C
+  to stop. An import error or a wrong path shows up immediately instead.
+</p>
+
 <h2>What each one does</h2>
 
 <h3>mind-reader</h3>
@@ -85,8 +154,14 @@
 
 <h2>Trying it</h2>
 <p>
-  Open Claude Code in any project and ask for something in your voice — “draft
-  a post about X as me”, or “what's my take on Y”. The reader should trigger
-  on its own. To feed something in, say “add this to my brain”.
+  In <strong>Claude Code</strong>, open any project and ask for something in
+  your voice — “draft a post about X as me”, or “what's my take on Y”. The
+  reader triggers on its own. To feed something in, say “add this to my
+  brain”.
+</p>
+<p>
+  In <strong>Claude Desktop</strong>, ask the same things. The server is
+  read-only, so Desktop can draw on your brain but cannot change it — adding
+  notes stays here, where you see the change before it lands.
 </p>
 {% endblock %}
