@@ -31,6 +31,8 @@
   --good-tint:   #16281f;
   --alert:       #f0b45f;
   --alert-tint:  #2e2113;
+  --danger:      #f4808f;
+  --danger-tint: #331419;
 
   --display: ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
   --sans:    "Avenir Next", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -69,6 +71,8 @@
     --good-tint:   #e6f7ee;
     --alert:       #a55a06;
     --alert-tint:  #fdf1de;
+    --danger:      #c02637;
+    --danger-tint: #fdeaec;
 
     --wash: .3;
   }
@@ -299,20 +303,32 @@ h3 { font: 600 .98rem/1.3 var(--sans); margin: 1.6rem 0 .5rem; letter-spacing: -
 
 /* ------------------------------------------------------------------ tags */
 
+/* Tinted rather than outlined. On a dark ground a ring of colour around
+ * small type reads as noise; a soft fill of the same hue reads as a label. */
 .tag {
   display: inline-block;
-  font: 500 .66rem/1.5 var(--mono);
-  letter-spacing: .07em;
+  font: 600 .63rem/1.7 var(--sans);
+  letter-spacing: .09em;
   text-transform: uppercase;
-  padding: 0 .4em;
-  border: 1px solid var(--line-firm);
+  padding: 0 .5em;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted) 15%, transparent);
   color: var(--muted);
   white-space: nowrap;
 }
-.tag--type { border-color: var(--muted); color: var(--text-soft); }
-.tag--alert { border-color: var(--accent); color: var(--accent); background: var(--accent-tint); }
-.tag--good { border-color: var(--good); color: var(--good); }
-.tag--quiet { border-style: dashed; }
+.tag--type {
+  background: color-mix(in oklab, var(--text-soft) 14%, transparent);
+  color: var(--text-soft);
+}
+/* The accent means "this is the owner's own voice" and nothing else. */
+.tag--voice { background: var(--accent-tint); color: var(--accent); }
+.tag--alert { background: var(--alert-tint); color: var(--alert); }
+.tag--good  { background: var(--good-tint);  color: var(--good); }
+.tag--quiet {
+  background: transparent;
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line-firm);
+}
 
 .topics { font: 400 .78rem var(--mono); color: var(--muted); }
 .topics span::after { content: " · "; }
@@ -346,20 +362,49 @@ h3 { font: 600 .98rem/1.3 var(--sans); margin: 1.6rem 0 .5rem; letter-spacing: -
 
 .btn {
   display: inline-block;
-  font: 500 .82rem/1 var(--mono);
-  letter-spacing: .04em;
-  padding: .68rem 1.15rem;
-  border: 1px solid var(--text);
-  background: var(--text);
-  color: var(--bg);
+  font: 600 .82rem/1 var(--sans);
+  letter-spacing: .01em;
+  padding: .66rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  background: var(--accent-deep);
+  color: #fff;
   text-decoration: none;
   cursor: pointer;
+  transition: background .14s ease, border-color .14s ease, color .14s ease,
+              box-shadow .14s ease, transform .06s ease;
 }
-.btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn--ghost { background: transparent; color: var(--text); border-color: var(--line-firm); }
-.btn--ghost:hover { background: transparent; border-color: var(--accent); color: var(--accent); }
-.btn--danger { background: transparent; color: var(--accent); border-color: var(--accent); }
-.btn--danger:hover { background: var(--accent); color: #fff; }
+.btn:hover {
+  background: var(--accent);
+  color: #16101f;
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 18%, transparent);
+}
+.btn:active { transform: translateY(1px); }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--line-firm);
+  box-shadow: none;
+}
+.btn--ghost:hover {
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  border-color: var(--accent);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.btn--danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: color-mix(in oklab, var(--danger) 45%, transparent);
+}
+.btn--danger:hover {
+  background: var(--danger-tint);
+  border-color: var(--danger);
+  color: var(--danger);
+  box-shadow: none;
+}
 
 .actions { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: 1.6rem; }
 
@@ -421,19 +466,28 @@ h3 { font: 600 .98rem/1.3 var(--sans); margin: 1.6rem 0 .5rem; letter-spacing: -
   margin-bottom: 1.6rem;
 }
 .pill {
-  font: 500 .74rem/1 var(--mono);
-  padding: .42rem .7rem;
-  border: 1px solid var(--line-firm);
+  font: 500 .78rem/1 var(--sans);
+  padding: .44rem .78rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
   color: var(--text-soft);
   text-decoration: none;
   white-space: nowrap;
+  background: transparent;
+  cursor: pointer;
+  transition: background .12s ease, border-color .12s ease, color .12s ease;
 }
-.pill:hover { border-color: var(--muted); color: var(--text); }
+.pill:hover {
+  border-color: var(--accent-edge);
+  background: color-mix(in oklab, var(--accent) 9%, transparent);
+  color: var(--text);
+}
 .pill[aria-current="true"] {
-  background: var(--text);
-  border-color: var(--text);
-  color: var(--bg);
+  background: var(--accent-deep);
+  border-color: var(--accent-deep);
+  color: #fff;
 }
+
 .filterbar .spacer { flex: 1; }
 
 /* ----------------------------------------------------------------- forms */

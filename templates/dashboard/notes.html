@@ -58,7 +58,7 @@
         <strong>{{ note.title }}</strong>
         {% if note.topics %}<br><span class="topics">{% for topic in note.topics %}<span>{{ topic }}</span>{% endfor %}</span>{% endif %}
       </span>
-      {% if note.verbatim %}<span class="tag tag--alert" title="Carries your own words">voice</span>{% endif %}
+      {% if note.verbatim %}<span class="tag tag--voice" title="Carries your own words">voice</span>{% endif %}
       {% if note.visibility == 'private' %}<span class="tag tag--quiet">private</span>{% endif %}
       {% if note.status == 'superseded' %}<span class="tag tag--quiet">superseded</span>{% endif %}
       <span class="tag tag--type">{{ note.type }}</span>
