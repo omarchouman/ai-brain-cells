@@ -95,12 +95,64 @@
 </form>
 
 {% if note %}
-<form method="post" action="{% url 'dashboard:note_delete' note_id=note.id %}"
-      onsubmit="return confirm('Delete this note? If you have changed your mind rather than made a mistake, superseding it keeps the old position as history.');">
+<h2>Changed your mind?</h2>
+
+{% if note.status == 'superseded' %}
+<div class="notice">
+  <p>
+    <span class="notice-title">This is history, not a current position.</span>
+    {% if replaced_by %}
+      Replaced by <a href="{% url 'dashboard:note_edit' note_id=replaced_by.id %}">{{ replaced_by.title }}</a>.
+    {% else %}
+      It points at <code>{{ note.superseded_by }}</code>, which no longer exists.
+    {% endif %}
+    Agents skip it entirely — which is the point, but it does mean nothing here
+    reaches your writing.
+  </p>
+</div>
+<form method="post" action="{% url 'dashboard:note_revive' note_id=note.id %}">
   {% csrf_token %}
   <div class="actions">
+    <button type="submit" class="btn btn--ghost">Make it current again</button>
+    <span class="help">If you superseded the wrong note.</span>
+  </div>
+</form>
+
+{% elif successors %}
+<p>
+  Write the new position as its own note first, then point this one at it. The
+  old note stays on disk and in git — your brain records how your thinking
+  moved, not just where it landed.
+</p>
+<form method="post" action="{% url 'dashboard:note_supersede' note_id=note.id %}">
+  {% csrf_token %}
+  <div class="field">
+    <label for="successor">Replaced by</label>
+    <select name="successor" id="successor">
+      <option value="">Pick the note that replaces this one…</option>
+      {% for other in successors %}
+        <option value="{{ other.id }}">{{ other.type }} — {{ other.title }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="actions">
+    <button type="submit" class="btn btn--ghost">Mark as superseded</button>
+  </div>
+</form>
+
+{% else %}
+<p class="help">
+  Nothing to supersede this with yet. Write the replacement note first, then
+  come back here.
+</p>
+{% endif %}
+
+<form method="post" action="{% url 'dashboard:note_delete' note_id=note.id %}"
+      onsubmit="return confirm('Delete this note? If you changed your mind rather than made a mistake, superseding keeps the old position as history.');">
+  {% csrf_token %}
+  <div class="form-foot">
     <button type="submit" class="btn btn--danger">Delete</button>
-    <span class="help">Changed your mind instead of made a mistake? Supersede keeps the history.</span>
+    <span class="help">For a note written by mistake. Changing your mind is what supersede is for.</span>
   </div>
 </form>
 {% endif %}

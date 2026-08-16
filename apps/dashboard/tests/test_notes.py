@@ -234,6 +234,17 @@ class NoteListTests(NoteWritingTestCase):
         self.assertNotIn(note.title, titles)
         self.assertEqual(response.context["superseded_count"], 1)
 
+    def test_the_sidebar_count_matches_what_the_link_shows(self):
+        note = self.notes()[0]
+        from apps.brain.writer import supersede_note
+
+        supersede_note(self.root, note, "take-2026-09-newer")
+
+        listing = self.client.get(reverse("dashboard:notes") + f"?type={note.type}")
+        self.assertEqual(
+            listing.context["counts"][note.type], len(listing.context["notes"])
+        )
+
     def test_can_ask_for_superseded_notes(self):
         note = self.notes()[0]
         from apps.brain.writer import supersede_note

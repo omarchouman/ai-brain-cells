@@ -18,6 +18,7 @@ from apps.brain.writer import (
     save_note,
     save_project,
     save_taxonomy,
+    supersede_note,
 )
 
 from .access import brain_exists, brain_root, current_brain
@@ -56,7 +57,15 @@ def needs_brain(view):
 
 
 def _nav_counts(brain) -> dict[str, int]:
-    return {t: len(brain.notes_of_type(t)) for t in NOTE_TYPES}
+    """Current notes only — the sidebar count has to match what the link shows.
+
+    Superseded notes are excluded by default in the list view, so counting
+    them here would advertise three takes and then show two.
+    """
+    return {
+        t: len([n for n in brain.notes_of_type(t) if n.is_current])
+        for t in NOTE_TYPES
+    }
 
 
 # --------------------------------------------------------------- first run
@@ -152,20 +161,32 @@ def overview(request: HttpRequest) -> HttpResponse:
 # ------------------------------------------------------------------- notes
 
 
+def _matches_query(note, query: str) -> bool:
+    """Substring search over the text a person would remember writing."""
+    haystack = " ".join([note.title, note.body, " ".join(note.topics), note.id])
+    return all(word in haystack.lower() for word in query.lower().split())
+
+
 @needs_brain
 def notes(request: HttpRequest) -> HttpResponse:
     brain = current_brain()
     selected = request.GET.get("type", "")
     topic = request.GET.get("topic", "")
     status = request.GET.get("status", "current")
+    query = request.GET.get("q", "").strip()
 
     visible = brain.notes
     if selected in NOTE_TYPES:
         visible = [n for n in visible if n.type == selected]
     if topic:
         visible = [n for n in visible if topic in n.topics]
-    if status in ("current", "superseded"):
+    # A search is a search of everything. Silently hiding superseded hits
+    # when someone typed an exact phrase they remember is worse than
+    # showing them, labelled.
+    if status in ("current", "superseded") and not query:
         visible = [n for n in visible if n.status == status]
+    if query:
+        visible = [n for n in visible if _matches_query(n, query)]
 
     return render(
         request,
@@ -180,6 +201,7 @@ def notes(request: HttpRequest) -> HttpResponse:
             "selected_type": selected,
             "selected_topic": topic,
             "selected_status": status,
+            "query": query,
             "type_labels": TYPE_LABELS,
             "superseded_count": len(
                 [n for n in brain.notes if n.status == "superseded"]
@@ -275,8 +297,56 @@ def note_edit(request: HttpRequest, note_id: str) -> HttpResponse:
             "form": form,
             "note": note,
             "type_help": TYPE_HELP,
+            "successors": [
+                other
+                for other in brain.notes
+                if other.id != note.id and other.status == "current"
+            ],
+            "replaced_by": brain.note(note.superseded_by or ""),
         },
     )
+
+
+@require_POST
+@needs_brain
+def note_supersede(request: HttpRequest, note_id: str) -> HttpResponse:
+    """Mark a note as history, pointing at what replaced it.
+
+    The contract prefers this to deleting: a brain that records how the
+    owner's thinking moved is worth more than one that only shows where it
+    landed, and an agent that can see the shift can avoid repeating a
+    position its owner has abandoned.
+    """
+    brain = current_brain()
+    note = _note_or_404(brain, note_id)
+    successor_id = request.POST.get("successor", "").strip()
+    successor = brain.note(successor_id)
+
+    if successor is None:
+        messages.error(request, "Pick the note that replaces this one.")
+    elif successor.id == note.id:
+        messages.error(request, "A note cannot supersede itself.")
+    else:
+        result = supersede_note(brain_root(), note, successor.id)
+        _report(
+            request,
+            result,
+            f"“{note.title}” is now history, replaced by “{successor.title}”",
+        )
+    return redirect("dashboard:note_edit", note_id=note.id)
+
+
+@require_POST
+@needs_brain
+def note_revive(request: HttpRequest, note_id: str) -> HttpResponse:
+    """Undo a supersede — for when you superseded the wrong note."""
+    brain = current_brain()
+    note = _note_or_404(brain, note_id)
+    note.status = "current"
+    note.superseded_by = None
+    result = save_note(brain_root(), note, previous_path=note.path)
+    _report(request, result, f"“{note.title}” is a current position again")
+    return redirect("dashboard:note_edit", note_id=note.id)
 
 
 @require_POST

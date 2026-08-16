@@ -27,8 +27,20 @@
   {% else %}
     <a class="pill" href="{% url 'dashboard:notes' %}?type={{ selected_type }}&status=current">back to current</a>
   {% endif %}
+  <form method="get" class="searchbar">
+    {% if selected_type %}<input type="hidden" name="type" value="{{ selected_type }}">{% endif %}
+    <input type="search" name="q" value="{{ query }}" placeholder="search notes" aria-label="Search notes">
+  </form>
   <a class="btn" href="{% url 'dashboard:note_new' %}{% if selected_type %}?type={{ selected_type }}{% endif %}">Write a note</a>
 </div>
+
+{% if query %}
+<p class="help">
+  {{ notes|length }} result{{ notes|length|pluralize }} for <strong>{{ query }}</strong>,
+  including superseded notes.
+  <a href="{% url 'dashboard:notes' %}{% if selected_type %}?type={{ selected_type }}{% endif %}">Clear</a>
+</p>
+{% endif %}
 
 {% if selected_topic %}
 <p class="help">
