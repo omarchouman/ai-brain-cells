@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block wrapclass %}wrap wrap--wide{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">Identity</p>
+  <h1>{{ doc.title }}</h1>
+  <p class="lede">{{ intro }}</p>
+</div>
+
+<form method="post" id="note-form">
+  {% csrf_token %}
+  <div class="editor-grid">
+    <div>
+      <div class="field">
+        <label for="{{ form.body.id_for_label }}">{{ doc.slug }}.md</label>
+        {{ form.body }}
+        {% if form.body.errors %}<ul class="errors">{% for e in form.body.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+        <p class="help">
+          Plain markdown. Replace the prompts as you answer them — anything
+          still saying TODO is counted as unwritten, here and in INDEX.md.
+        </p>
+      </div>
+
+      <div class="field">
+        <label for="{{ form.visibility.id_for_label }}">Visibility</label>
+        {{ form.visibility }}
+        <p class="help">
+          {% if doc.slug == 'voice' %}
+            Keep this private. It exposes your actual technique, and an
+            audience-facing bot reciting your hook formulas is a bad look.
+          {% else %}
+            “private” means background context only — agents use it to
+            understand you, but never quote it.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="preview-col">
+      <p class="preview-label">As an agent reads it</p>
+      <div class="preview-pane" id="preview"><p class="help">Start typing.</p></div>
+    </div>
+  </div>
+
+  <div class="form-foot">
+    <button type="submit" class="btn">Save</button>
+    <a class="btn btn--ghost" href="{% url 'dashboard:identity' %}">Back to identity</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const form = document.getElementById("note-form");
+  const pane = document.getElementById("preview");
+  const body = document.getElementById("{{ form.body.id_for_label }}");
+  const token = form.querySelector("[name=csrfmiddlewaretoken]").value;
+  let timer = null;
+
+  async function refresh() {
+    try {
+      const response = await fetch("{% url 'dashboard:preview' %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": token },
+        body: new URLSearchParams({ body: body.value, csrfmiddlewaretoken: token }),
+      });
+      if (!response.ok) return;
+      pane.innerHTML = (await response.json()).html || '<p class="help">Nothing yet.</p>';
+    } catch (e) {
+      /* Preview is a convenience; losing it must never block writing. */
+    }
+  }
+
+  body.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(refresh, 250);
+  });
+  if (body.value.trim()) refresh();
+})();
+</script>
+{% endblock %}

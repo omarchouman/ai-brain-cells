@@ -50,7 +50,7 @@
 </p>
 <ul class="rows">
   {% for doc in identity %}
-  <li><div class="row">
+  <li><a class="row" href="{% url 'dashboard:identity_edit' slug=doc.slug %}">
     <span class="row-title"><strong>{{ doc.title }}</strong> — {{ doc.blurb }}</span>
     {% if doc.written %}
       <span class="tag tag--good">written</span>
@@ -59,7 +59,7 @@
     {% else %}
       <span class="tag tag--quiet">missing</span>
     {% endif %}
-  </div></li>
+  </a></li>
   {% endfor %}
 </ul>
 

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">Identity</p>
+  <h1>Who you are</h1>
+  <p class="lede">
+    These three files load on every task an agent does in your name. They are
+    worth more than any single note — a brain full of takes with no voice file
+    produces text that is accurate and sounds like nobody.
+  </p>
+</div>
+
+<ul class="rows">
+  {% for row in rows %}
+  <li>
+    <a class="row" href="{% url 'dashboard:identity_edit' slug=row.slug %}">
+      <span class="row-title">
+        <strong>{{ row.title }}</strong>
+        <br><span class="topics">{{ row.blurb }}</span>
+      </span>
+      {% if row.written %}
+        <span class="tag tag--good">written</span>
+      {% elif row.exists %}
+        <span class="tag tag--alert">still a template</span>
+      {% else %}
+        <span class="tag tag--quiet">missing</span>
+      {% endif %}
+      <span class="row-meta">{{ row.slug }}.md</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+<div class="notice notice--plain">
+  <p>
+    <span class="notice-title">Start with voice.</span>
+    It is the one that changes output the most, and the one nobody writes
+    because it feels harder than it is. You do not need prose about your
+    style — you need three sentences you actually wrote, pasted in.
+  </p>
+</div>
+{% endblock %}

@@ -8,10 +8,10 @@ from django.views.decorators.http import require_POST
 
 from apps.brain.notes import IDENTITY_SLUGS, NOTE_TYPES, IdentityDoc
 from apps.brain.repo import initialize_brain, is_repo, recent_commits
-from apps.brain.writer import assign_note_id, delete_note, save_note
+from apps.brain.writer import assign_note_id, delete_note, save_identity, save_note
 
 from .access import brain_exists, brain_root, current_brain
-from .forms import TYPE_HELP, NoteForm
+from .forms import TYPE_HELP, IdentityForm, NoteForm
 from .rendering import render_markdown, split_verbatim
 
 TYPE_LABELS = {
@@ -266,6 +266,99 @@ def note_delete(request: HttpRequest, note_id: str) -> HttpResponse:
     result = delete_note(brain_root(), note)
     _report(request, result, f"Deleted {note.type}: {note.title}")
     return redirect("dashboard:notes")
+
+
+# ---------------------------------------------------------------- identity
+
+
+IDENTITY_INTROS = {
+    "core": (
+        "Ten honest lines beat a page of positioning. Agents load this on every "
+        "task, so keep it short and true."
+    ),
+    "voice": (
+        "The highest-leverage file in the brain. What makes it work is real "
+        "sentences you actually wrote — rules describe a voice, examples "
+        "transmit one. Two paragraphs of your own writing beat a page of "
+        "adjectives about it."
+    ),
+    "beliefs": (
+        "The positions that cut across everything you make. A belief specific "
+        "to one subject is a take, and belongs in your notes instead."
+    ),
+}
+
+
+@needs_brain
+def identity(request: HttpRequest) -> HttpResponse:
+    brain = current_brain()
+    return render(
+        request,
+        "dashboard/identity.html",
+        {
+            "nav": "identity",
+            "page_title": "Identity",
+            "brain": brain,
+            "counts": _nav_counts(brain),
+            "rows": _identity_rows(brain),
+            "intros": IDENTITY_INTROS,
+        },
+    )
+
+
+@needs_brain
+def identity_edit(request: HttpRequest, slug: str) -> HttpResponse:
+    if slug not in IDENTITY_SLUGS:
+        raise Http404("No such identity file.")
+
+    brain = current_brain()
+    doc = brain.identity.get(slug) or _identity_from_template(slug)
+
+    if request.method == "POST":
+        form = IdentityForm(request.POST)
+        if form.is_valid():
+            doc.visibility = form.cleaned_data["visibility"]
+            doc.body = form.cleaned_data["body"].strip()
+            result = save_identity(brain_root(), doc)
+            _report(request, result, f"Saved {slug}.md")
+            return redirect("dashboard:identity_edit", slug=slug)
+    else:
+        form = IdentityForm(
+            initial={"visibility": doc.visibility, "body": doc.body}
+        )
+
+    return render(
+        request,
+        "dashboard/identity_form.html",
+        {
+            "nav": "identity",
+            "page_title": doc.title,
+            "brain": brain,
+            "counts": _nav_counts(brain),
+            "form": form,
+            "doc": doc,
+            "intro": IDENTITY_INTROS[slug],
+        },
+    )
+
+
+def _identity_from_template(slug: str) -> IdentityDoc:
+    """Fall back to the shipped prompts if the file was deleted.
+
+    Better to hand someone the questions again than an empty box.
+    """
+    from apps.brain.storage import read_document
+
+    doc = IdentityDoc(slug=slug, body="")
+    source = settings.BRAIN_TEMPLATE_PATH / "identity" / f"{slug}.md"
+    if source.is_file():
+        try:
+            meta, body = read_document(source)
+        except Exception:
+            return doc
+        doc.visibility = meta.get("visibility", "private")
+        doc.body = body
+    return doc
 
 
 @require_POST
