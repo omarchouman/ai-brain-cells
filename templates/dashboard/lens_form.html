@@ -9,6 +9,7 @@
 
 <form method="post">
   {% csrf_token %}
+  {% include "dashboard/_conflict.html" %}
   <div class="editor-grid">
     <div>
       <div class="field">
@@ -47,6 +48,7 @@
     </div>
 
     <div class="preview-col">
+      {% include "dashboard/_conflict_disk.html" %}
       <p class="preview-label">What it pulls today</p>
       <div class="preview-pane">
         {% if lens %}

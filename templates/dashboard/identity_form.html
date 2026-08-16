@@ -10,6 +10,7 @@
 
 <form method="post" id="note-form">
   {% csrf_token %}
+  {% include "dashboard/_conflict.html" %}
   <div class="editor-grid">
     <div>
       <div class="field">
@@ -38,6 +39,7 @@
     </div>
 
     <div class="preview-col">
+      {% include "dashboard/_conflict_disk.html" %}
       <p class="preview-label">As an agent reads it</p>
       <div class="preview-pane" id="preview"><p class="help">Start typing.</p></div>
     </div>

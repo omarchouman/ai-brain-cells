@@ -6,6 +6,7 @@ metadata and let the problem travel), and the key order in the output is
 part of the contract, so files stay readable and diffs stay small.
 """
 
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -66,6 +67,21 @@ def read_document(path: Path) -> tuple[dict[str, Any], str]:
         raise BrainFileError("Frontmatter must be a mapping of keys to values.", path)
 
     return meta, "\n".join(lines[closing + 1 :]).strip()
+
+
+def content_fingerprint(path: Path) -> str:
+    """A short hash of a file's bytes, or "" if it isn't there.
+
+    Deliberately a content hash rather than the (mtime, size) pair the
+    scanner caches on. The question here is "is this the same text I showed
+    the user", which has to be exact — an edit that preserves length inside
+    a filesystem's timestamp granularity is precisely the case that must not
+    slip through.
+    """
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+    except OSError:
+        return ""
 
 
 def unique_path(path: Path) -> Path:

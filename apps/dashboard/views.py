@@ -1,5 +1,6 @@
 import functools
 from datetime import date
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib import messages
@@ -9,6 +10,8 @@ from django.views.decorators.http import require_POST
 
 from apps.brain.notes import IDENTITY_SLUGS, NOTE_TYPES, IdentityDoc
 from apps.brain.repo import initialize_brain, is_repo, recent_commits
+from apps.brain.storage import content_fingerprint
+from apps.brain.taxonomy import taxonomy_path
 from apps.brain.writer import (
     assign_note_id,
     delete_entity,
@@ -54,6 +57,38 @@ def needs_brain(view):
         return view(request, *args, **kwargs)
 
     return wrapper
+
+
+CONFLICT_MESSAGE = (
+    "This file changed on disk after you opened it — most likely you edited "
+    "it in your editor, or an agent wrote to it. Nothing has been saved. "
+    "What's on disk now is shown on the right; copy anything you want to "
+    "keep, then save again to overwrite it."
+)
+
+
+def _conflicted(form, path) -> bool:
+    """True if the file moved underneath the form that is being submitted.
+
+    The dashboard and an editor are both meant to be valid ways to change a
+    note, which only holds if neither can silently discard the other's work.
+    Submitting again after seeing this goes through: the baseline is
+    refreshed to the version just shown, so overwriting is possible but
+    never accidental.
+    """
+    baseline = (form.data.get("baseline") or "").strip()
+    current = content_fingerprint(path) if path else ""
+    if not baseline or not current or baseline == current:
+        return False
+
+    form.add_error(None, CONFLICT_MESSAGE)
+    form.data = form.data.copy()
+    form.data["baseline"] = current
+    try:
+        form.conflict_disk_text = Path(path).read_text(encoding="utf-8")
+    except OSError:
+        form.conflict_disk_text = ""
+    return True
 
 
 def _nav_counts(brain) -> dict[str, int]:
@@ -263,7 +298,7 @@ def note_edit(request: HttpRequest, note_id: str) -> HttpResponse:
 
     if request.method == "POST":
         form = NoteForm(request.POST, brain=brain)
-        if form.is_valid():
+        if form.is_valid() and not _conflicted(form, note.path):
             updated = form.to_note(existing=note)
             assign_note_id(brain_root(), updated, keep_id=note.id)
             result = save_note(brain_root(), updated, previous_path=note.path)
@@ -283,6 +318,7 @@ def note_edit(request: HttpRequest, note_id: str) -> HttpResponse:
                 "source_url": note.source_url or "",
                 "body": prose,
                 "verbatim": verbatim,
+                "baseline": content_fingerprint(note.path),
             },
         )
 
@@ -432,7 +468,7 @@ def project_edit(request: HttpRequest, slug: str) -> HttpResponse:
 
     if request.method == "POST":
         form = ProjectForm(request.POST, brain=brain)
-        if form.is_valid():
+        if form.is_valid() and not _conflicted(form, card.path):
             updated = form.to_card(existing=card)
             result = save_project(brain_root(), updated, previous_path=card.path)
             _report(request, result, f"Saved project: {updated.title}")
@@ -447,6 +483,7 @@ def project_edit(request: HttpRequest, slug: str) -> HttpResponse:
                 "visibility": card.visibility,
                 "url": card.url or "",
                 "body": card.body,
+                "baseline": content_fingerprint(card.path),
             },
         )
 
@@ -560,7 +597,7 @@ def taxonomy(request: HttpRequest) -> HttpResponse:
 
     if request.method == "POST":
         form = TaxonomyForm(request.POST)
-        if form.is_valid():
+        if form.is_valid() and not _conflicted(form, taxonomy_path(brain_root())):
             kept = form.cleaned_data["topics"]
             orphaned = sorted(
                 topic
@@ -582,7 +619,12 @@ def taxonomy(request: HttpRequest) -> HttpResponse:
                 _report(request, result, "Saved taxonomy")
                 return redirect("dashboard:taxonomy")
     else:
-        form = TaxonomyForm(initial={"topics": "\n".join(brain.topics)})
+        form = TaxonomyForm(
+            initial={
+                "topics": "\n".join(brain.topics),
+                "baseline": content_fingerprint(taxonomy_path(brain_root())),
+            }
+        )
 
     return render(
         request,
@@ -661,7 +703,7 @@ def lens_edit(request: HttpRequest, name: str) -> HttpResponse:
 
     if request.method == "POST":
         form = LensForm(request.POST, brain=brain)
-        if form.is_valid():
+        if form.is_valid() and not _conflicted(form, lens.path):
             updated = form.to_lens(existing=lens)
             result = save_lens(brain_root(), updated, previous_path=lens.path)
             _report(request, result, f"Saved lens: {updated.name}")
@@ -675,6 +717,7 @@ def lens_edit(request: HttpRequest, name: str) -> HttpResponse:
                 "types": lens.types,
                 "visibility_ceiling": lens.visibility_ceiling,
                 "body": lens.body,
+                "baseline": content_fingerprint(lens.path),
             },
         )
 
@@ -763,7 +806,7 @@ def identity_edit(request: HttpRequest, slug: str) -> HttpResponse:
 
     if request.method == "POST":
         form = IdentityForm(request.POST)
-        if form.is_valid():
+        if form.is_valid() and not _conflicted(form, doc.path):
             doc.visibility = form.cleaned_data["visibility"]
             doc.body = form.cleaned_data["body"].strip()
             result = save_identity(brain_root(), doc)
@@ -771,7 +814,11 @@ def identity_edit(request: HttpRequest, slug: str) -> HttpResponse:
             return redirect("dashboard:identity_edit", slug=slug)
     else:
         form = IdentityForm(
-            initial={"visibility": doc.visibility, "body": doc.body}
+            initial={
+                "visibility": doc.visibility,
+                "body": doc.body,
+                "baseline": content_fingerprint(doc.path) if doc.path else "",
+            }
         )
 
     return render(

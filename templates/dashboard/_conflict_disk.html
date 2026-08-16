@@ -1,0 +1,12 @@
+{% comment %}
+The file as it currently is on disk, shown beside the editor when a save
+was refused. Read-only and selectable: the point is to let someone rescue
+whatever the other edit added before deciding to overwrite it.
+{% endcomment %}
+{% if form.conflict_disk_text %}
+<p class="preview-label">On disk right now</p>
+<pre class="disk-version">{{ form.conflict_disk_text }}</pre>
+<p class="help">
+  Saving again overwrites this with what's in the form.
+</p>
+{% endif %}

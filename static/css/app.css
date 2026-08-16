@@ -510,3 +510,18 @@ h3 { font: 600 1rem/1.3 var(--serif); margin: 1.6rem 0 .5rem; }
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
+
+/* ------------------------------------------------------- conflict panel */
+
+.disk-version {
+  font: 400 .78rem/1.6 var(--mono);
+  background: var(--paper-rise);
+  border: 1px solid var(--accent);
+  border-left-width: 3px;
+  padding: .8rem .9rem;
+  margin: 0 0 .6rem;
+  max-height: 22rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

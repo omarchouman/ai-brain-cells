@@ -1,0 +1,11 @@
+{% comment %}
+Rendered inside every editor form. The hidden baseline is what makes the
+concurrent-edit check possible at all, so it must be present in each one.
+{% endcomment %}
+{{ form.baseline }}
+
+{% if form.non_field_errors %}
+<div class="notice">
+  {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+</div>
+{% endif %}

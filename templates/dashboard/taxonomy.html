@@ -16,6 +16,7 @@
   <div>
     <form method="post">
       {% csrf_token %}
+      {% include "dashboard/_conflict.html" %}
       <div class="field">
         <label for="{{ form.topics.id_for_label }}">One per line</label>
         {{ form.topics }}
@@ -29,6 +30,7 @@
   </div>
 
   <div class="preview-col">
+    {% include "dashboard/_conflict_disk.html" %}
     <p class="preview-label">In use</p>
     <div class="preview-pane">
       {% if usage %}

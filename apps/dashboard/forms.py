@@ -29,6 +29,18 @@ from .rendering import join_verbatim
 
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 
+
+class BaselineForm(forms.Form):
+    """Carries the fingerprint of the file as it was when the form loaded.
+
+    Compared against the file on save so an edit made in an editor, in
+    another tab, or by an agent can't be silently overwritten by a form
+    that was rendered before it happened.
+    """
+
+    baseline = forms.CharField(required=False, widget=forms.HiddenInput)
+
+
 TYPE_HELP = {
     "take": "An opinionated position — your angle on something.",
     "story": "A narrative with real numbers, failures and outcomes.",
@@ -54,7 +66,7 @@ class TopicsField(forms.MultipleChoiceField):
             )
 
 
-class NoteForm(forms.Form):
+class NoteForm(BaselineForm):
     type = forms.ChoiceField(choices=[(t, t) for t in NOTE_TYPES])
     title = forms.CharField(
         max_length=180,
@@ -147,7 +159,7 @@ class NoteForm(forms.Form):
         )
 
 
-class ProjectForm(forms.Form):
+class ProjectForm(BaselineForm):
     title = forms.CharField(max_length=180)
     status = forms.ChoiceField(choices=[(s, s) for s in PROJECT_STATUSES])
     topics = TopicsField(required=False, widget=forms.CheckboxSelectMultiple)
@@ -187,12 +199,12 @@ class ProjectForm(forms.Form):
         )
 
 
-class IdentityForm(forms.Form):
+class IdentityForm(BaselineForm):
     visibility = forms.ChoiceField(choices=[(v, v) for v in VISIBILITIES])
     body = forms.CharField(widget=forms.Textarea(attrs={"rows": 26}))
 
 
-class LensForm(forms.Form):
+class LensForm(BaselineForm):
     name = forms.SlugField(
         max_length=60,
         help_text="lowercase-with-hyphens. This is how you'll invoke it: “use my building-in-public lens”.",
@@ -227,7 +239,7 @@ class LensForm(forms.Form):
         )
 
 
-class TaxonomyForm(forms.Form):
+class TaxonomyForm(BaselineForm):
     topics = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 14}),
         help_text=(
