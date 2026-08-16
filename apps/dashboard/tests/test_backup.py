@@ -26,10 +26,21 @@ class BackupTestCase(BrainViewTestCase):
         self.create_brain()
         self._remote_tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._remote_tmp.cleanup)
-        self.remote = Path(self._remote_tmp.name) / "brain.git"
+        self.remote = self.bare_repo("brain.git")
+
+    def bare_repo(self, name):
+        """A bare repo standing in for a backup remote.
+
+        The branch is named explicitly. Git's default differs by version —
+        older ones use `master` — and a fixture that inherits whatever the
+        machine happens to do will pass locally and fail in CI, which is
+        exactly what it did.
+        """
+        path = Path(self._remote_tmp.name) / name
         subprocess.run(
-            ["git", "init", "--bare", "-q", str(self.remote)], check=True
+            ["git", "init", "--bare", "-q", "-b", "main", str(path)], check=True
         )
+        return path
 
     def add_note(self, title="A take"):
         note = Note(
@@ -40,9 +51,10 @@ class BackupTestCase(BrainViewTestCase):
         assign_note_id(self.root, note)
         save_note(self.root, note)
 
-    def remote_log(self):
+    def remote_log(self, branch="main"):
+        """Read the branch by name rather than trusting the remote's HEAD."""
         result = subprocess.run(
-            ["git", "-C", str(self.remote), "log", "--format=%s"],
+            ["git", "-C", str(self.remote), "log", branch, "--format=%s"],
             capture_output=True, text=True,
         )
         return result.stdout.splitlines()
@@ -58,8 +70,7 @@ class RemoteTests(BackupTestCase):
 
     def test_setting_twice_updates_rather_than_failing(self):
         set_remote(self.root, str(self.remote))
-        second = Path(self._remote_tmp.name) / "other.git"
-        subprocess.run(["git", "init", "--bare", "-q", str(second)], check=True)
+        second = self.bare_repo("other.git")
 
         self.assertTrue(set_remote(self.root, str(second)))
         self.assertEqual(get_remote(self.root), str(second))
