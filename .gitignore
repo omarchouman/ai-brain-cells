@@ -1,5 +1,7 @@
 # The brain is its own git repo, versioned independently of this tool.
-brain/
+# Anchored with a leading slash: an unanchored `brain/` also matches
+# apps/brain/, which is this project's own source.
+/brain/
 
 .venv/
 __pycache__/
