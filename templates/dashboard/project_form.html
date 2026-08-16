@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block wrapclass %}wrap wrap--wide{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">{% if card %}Editing project{% else %}New project{% endif %}</p>
+  <h1>{% if card %}{{ card.title }}{% else %}Add a project{% endif %}</h1>
+  {% if card %}
+    <p class="lede path">{{ card.id }} · last verified {{ card.last_verified }}</p>
+  {% endif %}
+</div>
+
+<form method="post" id="note-form">
+  {% csrf_token %}
+  <div class="editor-grid">
+    <div>
+      <div class="field">
+        <label for="{{ form.title.id_for_label }}">Name</label>
+        {{ form.title }}
+        {% if form.title.errors %}<ul class="errors">{% for e in form.title.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+        {% if card %}<p class="help">The filename stays <code>{{ card.slug }}.md</code> — notes reference this card by id, and renaming it would break them.</p>{% endif %}
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="{{ form.status.id_for_label }}">Status</label>
+          {{ form.status }}
+        </div>
+        <div class="field">
+          <label for="{{ form.visibility.id_for_label }}">Visibility</label>
+          {{ form.visibility }}
+        </div>
+      </div>
+
+      <div class="field">
+        <p class="field-legend">Topics</p>
+        <div class="checks">{{ form.topics }}</div>
+        {% if form.topics.errors %}<ul class="errors">{% for e in form.topics.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="{{ form.body.id_for_label }}">The card</label>
+        {{ form.body }}
+        <p class="help">{{ form.body.help_text }}</p>
+        {% if form.body.errors %}<ul class="errors">{% for e in form.body.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="{{ form.url.id_for_label }}">Where it lives</label>
+        {{ form.url }}
+        <p class="help">{{ form.url.help_text }}</p>
+        {% if form.url.errors %}<ul class="errors">{% for e in form.url.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+    </div>
+
+    <div class="preview-col">
+      <p class="preview-label">As an agent reads it</p>
+      <div class="preview-pane" id="preview"><p class="help">Start typing.</p></div>
+    </div>
+  </div>
+
+  <div class="form-foot">
+    <button type="submit" class="btn">Save</button>
+    <a class="btn btn--ghost" href="{% url 'dashboard:projects' %}">Back to projects</a>
+    <span class="spacer"></span>
+    <span class="help">Saving re-dates the card to today.</span>
+  </div>
+</form>
+
+{% if card %}
+<form method="post" action="{% url 'dashboard:project_delete' slug=card.slug %}"
+      onsubmit="return confirm('Delete this project card? Notes referencing it will keep the reference and point at nothing.');">
+  {% csrf_token %}
+  <div class="actions"><button type="submit" class="btn btn--danger">Delete</button></div>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const form = document.getElementById("note-form");
+  const pane = document.getElementById("preview");
+  const body = document.getElementById("{{ form.body.id_for_label }}");
+  const token = form.querySelector("[name=csrfmiddlewaretoken]").value;
+  let timer = null;
+
+  async function refresh() {
+    try {
+      const response = await fetch("{% url 'dashboard:preview' %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": token },
+        body: new URLSearchParams({ body: body.value, csrfmiddlewaretoken: token }),
+      });
+      if (!response.ok) return;
+      pane.innerHTML = (await response.json()).html || '<p class="help">Nothing yet.</p>';
+    } catch (e) { /* preview is a convenience */ }
+  }
+
+  body.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(refresh, 250);
+  });
+  if (body.value.trim()) refresh();
+})();
+</script>
+{% endblock %}

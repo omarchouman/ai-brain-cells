@@ -38,6 +38,13 @@
         <li><a href="{% url 'dashboard:notes' %}?type=fact">Facts<span class="nav-count">{{ counts.fact }}</span></a></li>
       </ul>
     </div>
+
+    <div class="nav-group">
+      <p class="nav-label">Work</p>
+      <ul class="nav-list">
+        <li><a href="{% url 'dashboard:projects' %}" {% if nav == 'projects' %}aria-current="page"{% endif %}>Projects<span class="nav-count">{{ brain.projects|length }}</span></a></li>
+      </ul>
+    </div>
     {% endif %}
   </nav>
 

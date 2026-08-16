@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block wrapclass %}wrap wrap--wide{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">Projects</p>
+  <h1>What you're building</h1>
+  <p class="lede">
+    One card per project: what it is, where it stands, and what numbers are
+    real. This is how an agent answers a question about your work without
+    inventing the details.
+  </p>
+</div>
+
+<div class="filterbar">
+  <span class="row-meta">{{ projects|length }} card{{ projects|length|pluralize }}</span>
+  <span class="spacer"></span>
+  <a class="btn" href="{% url 'dashboard:project_new' %}">Add a project</a>
+</div>
+
+{% if projects %}
+<ul class="rows">
+  {% for card in projects %}
+  <li>
+    <div class="row">
+      <a class="row-title" href="{% url 'dashboard:project_edit' slug=card.slug %}">
+        <strong>{{ card.title }}</strong>
+        {% if card.topics %}<br><span class="topics">{% for topic in card.topics %}<span>{{ topic }}</span>{% endfor %}</span>{% endif %}
+      </a>
+      {% if card.visibility == 'private' %}<span class="tag tag--quiet">private</span>{% endif %}
+      <span class="tag tag--type">{{ card.status }}</span>
+      {% if card.is_stale %}
+        <span class="tag tag--alert">unverified {{ card.days_since_verified }}d</span>
+        <form method="post" action="{% url 'dashboard:project_verify' slug=card.slug %}">
+          {% csrf_token %}
+          <button type="submit" class="pill" title="Confirm the numbers on this card are still accurate">still true</button>
+        </form>
+      {% else %}
+        <span class="row-meta">{{ card.last_verified }}</span>
+      {% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+
+{% if stale %}
+<div class="notice">
+  <p>
+    <span class="notice-title">{{ stale|length }} card{{ stale|pluralize }} past 45 days.</span>
+    Agents will hedge or omit their numbers rather than present them as
+    current. Read the card, and if it still holds, hit “still true”.
+  </p>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty">
+  <p>No project cards yet.</p>
+  <p>
+    A card holds the <em>about</em> layer — what the thing is, where it stands,
+    why you're building it, and a pointer to where the work actually lives. The
+    brain knows about your work; it doesn't contain it.
+  </p>
+  <p><a class="btn" href="{% url 'dashboard:project_new' %}">Add your first project</a></p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,4 +1,5 @@
 import functools
+from datetime import date
 
 from django.conf import settings
 from django.contrib import messages
@@ -8,10 +9,17 @@ from django.views.decorators.http import require_POST
 
 from apps.brain.notes import IDENTITY_SLUGS, NOTE_TYPES, IdentityDoc
 from apps.brain.repo import initialize_brain, is_repo, recent_commits
-from apps.brain.writer import assign_note_id, delete_note, save_identity, save_note
+from apps.brain.writer import (
+    assign_note_id,
+    delete_entity,
+    delete_note,
+    save_identity,
+    save_note,
+    save_project,
+)
 
 from .access import brain_exists, brain_root, current_brain
-from .forms import TYPE_HELP, IdentityForm, NoteForm
+from .forms import TYPE_HELP, IdentityForm, NoteForm, ProjectForm
 from .rendering import render_markdown, split_verbatim
 
 TYPE_LABELS = {
@@ -268,6 +276,140 @@ def note_delete(request: HttpRequest, note_id: str) -> HttpResponse:
     return redirect("dashboard:notes")
 
 
+# ---------------------------------------------------------------- projects
+
+
+PROJECT_STARTER = """## What it is
+
+## Where it stands
+
+## Why I'm building it
+
+## Where it lives
+"""
+
+
+def _project_or_404(brain, slug):
+    card = brain.project(slug)
+    if card is None:
+        raise Http404("No project with that slug.")
+    return card
+
+
+@needs_brain
+def projects(request: HttpRequest) -> HttpResponse:
+    brain = current_brain()
+    return render(
+        request,
+        "dashboard/projects.html",
+        {
+            "nav": "projects",
+            "page_title": "Projects",
+            "brain": brain,
+            "counts": _nav_counts(brain),
+            "projects": brain.projects,
+            "stale": brain.stale_projects(),
+        },
+    )
+
+
+@needs_brain
+def project_new(request: HttpRequest) -> HttpResponse:
+    brain = current_brain()
+    if request.method == "POST":
+        form = ProjectForm(request.POST, brain=brain)
+        if form.is_valid():
+            card = form.to_card()
+            result = save_project(brain_root(), card)
+            _report(request, result, f"Saved project: {card.title}")
+            return redirect("dashboard:project_edit", slug=card.slug)
+    else:
+        form = ProjectForm(
+            brain=brain,
+            initial={"status": "active", "visibility": "public", "body": PROJECT_STARTER},
+        )
+    return render(
+        request,
+        "dashboard/project_form.html",
+        {
+            "nav": "projects",
+            "page_title": "New project",
+            "brain": brain,
+            "counts": _nav_counts(brain),
+            "form": form,
+            "card": None,
+        },
+    )
+
+
+@needs_brain
+def project_edit(request: HttpRequest, slug: str) -> HttpResponse:
+    brain = current_brain()
+    card = _project_or_404(brain, slug)
+
+    if request.method == "POST":
+        form = ProjectForm(request.POST, brain=brain)
+        if form.is_valid():
+            updated = form.to_card(existing=card)
+            result = save_project(brain_root(), updated, previous_path=card.path)
+            _report(request, result, f"Saved project: {updated.title}")
+            return redirect("dashboard:project_edit", slug=updated.slug)
+    else:
+        form = ProjectForm(
+            brain=brain,
+            initial={
+                "title": card.title,
+                "status": card.status,
+                "topics": card.topics,
+                "visibility": card.visibility,
+                "url": card.url or "",
+                "body": card.body,
+            },
+        )
+
+    return render(
+        request,
+        "dashboard/project_form.html",
+        {
+            "nav": "projects",
+            "page_title": card.title,
+            "brain": brain,
+            "counts": _nav_counts(brain),
+            "form": form,
+            "card": card,
+        },
+    )
+
+
+@require_POST
+@needs_brain
+def project_verify(request: HttpRequest, slug: str) -> HttpResponse:
+    """Re-date a card you have just read and found still true.
+
+    The staleness rule is only useful if clearing it is one click. Making
+    people re-save the whole card to say "still accurate" is how cards go
+    stale and stay that way.
+    """
+    brain = current_brain()
+    card = _project_or_404(brain, slug)
+    card.last_verified = date.today()
+    result = save_project(brain_root(), card, previous_path=card.path)
+    _report(request, result, f"Marked {card.title} verified today")
+    return redirect("dashboard:projects")
+
+
+@require_POST
+@needs_brain
+def project_delete(request: HttpRequest, slug: str) -> HttpResponse:
+    brain = current_brain()
+    card = _project_or_404(brain, slug)
+    result = delete_entity(
+        brain_root(), card.path, f"Delete project: {card.title}"
+    )
+    _report(request, result, f"Deleted project: {card.title}")
+    return redirect("dashboard:projects")
+
+
 # ---------------------------------------------------------------- identity
 
 
@@ -377,8 +519,6 @@ def preview(request: HttpRequest) -> JsonResponse:
 
 
 def _default_month() -> str:
-    from datetime import date
-
     today = date.today()
     return f"{today.year:04d}-{today.month:02d}"
 

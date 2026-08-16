@@ -4,19 +4,22 @@
 <div class="page-head">
   <p class="eyebrow">Overview</p>
   <h1>Your brain</h1>
-  <p class="lede">
-    {% if brain.is_empty %}
+  {% if brain.is_empty %}
+    <p class="lede">
       Nothing in it yet. The fastest way to make it useful is to write your
       voice file, then three or four takes you already hold.
     </p>
     <p class="actions">
-      <a class="btn" href="{% url 'dashboard:note_new' %}?type=take">Write your first take</a>
-    {% else %}
+      <a class="btn" href="{% url 'dashboard:identity_edit' slug='voice' %}">Write your voice file</a>
+      <a class="btn btn--ghost" href="{% url 'dashboard:note_new' %}?type=take">Write a take</a>
+    </p>
+  {% else %}
+    <p class="lede">
       {{ note_total }} note{{ note_total|pluralize }} across
       {{ brain.projects|length }} project{{ brain.projects|length|pluralize }},
       readable by any agent that asks.
-    {% endif %}
-  </p>
+    </p>
+  {% endif %}
 </div>
 
 <div class="figures">
@@ -67,7 +70,7 @@
 {% if brain.projects %}
 <ul class="rows">
   {% for card in brain.projects %}
-  <li><div class="row">
+  <li><a class="row" href="{% url 'dashboard:project_edit' slug=card.slug %}">
     <span class="row-title">
       <strong>{{ card.title }}</strong>
       {% if card.topics %}<br><span class="topics">{% for topic in card.topics %}<span>{{ topic }}</span>{% endfor %}</span>{% endif %}
@@ -78,7 +81,7 @@
     {% else %}
       <span class="row-meta">checked {{ card.last_verified }}</span>
     {% endif %}
-  </div></li>
+  </a></li>
   {% endfor %}
 </ul>
 {% if stale %}
@@ -95,6 +98,7 @@
   <p>No project cards yet.</p>
   <p>A card is how an agent knows what you're building, where it stands, and what
      numbers are real. One card per project is usually enough.</p>
+  <p><a class="btn" href="{% url 'dashboard:project_new' %}">Add your first project</a></p>
 </div>
 {% endif %}
 
