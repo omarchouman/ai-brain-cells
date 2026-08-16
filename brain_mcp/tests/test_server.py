@@ -98,6 +98,31 @@ class ToolRegistrationTests(ServerTestCase):
         for rule in ("private", "superseded", "VERBATIM", "45 days"):
             self.assertIn(rule, instructions)
 
+    def test_every_description_leads_with_when_to_call_it(self):
+        """A description that only says what a tool does loses to a built-in
+        that triggers on the same question. Trigger conditions are what make
+        these get reached for at all."""
+        for tool in asyncio.run(self.server.list_tools()):
+            with self.subTest(tool=tool.name):
+                first_line = tool.description.strip().splitlines()[0]
+                self.assertTrue(
+                    first_line.startswith("Call this"),
+                    f"{tool.name} opens with: {first_line!r}",
+                )
+
+    def test_the_instructions_claim_authority_over_other_context(self):
+        """Claude Desktop has its own memory, and 'what do I believe' lands
+        there by default. The brain has to say which one is the record."""
+        instructions = self.server.instructions
+        self.assertIn("source of record", instructions)
+        self.assertIn("their own words", instructions)
+
+    def test_descriptions_stay_small_enough_to_ride_every_request(self):
+        total = sum(
+            len(t.description) for t in asyncio.run(self.server.list_tools())
+        )
+        self.assertLess(total, 8000, f"tool descriptions total {total} chars")
+
 
 class OverviewTests(ServerTestCase):
     def test_reports_counts_and_identity_state(self):

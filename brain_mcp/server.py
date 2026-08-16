@@ -44,9 +44,23 @@ TYPE_PLURALS = {"take": "takes", "story": "stories", "lesson": "lessons", "fact"
 INSTRUCTIONS = """\
 This server serves one person's brain: a git repo of markdown holding who
 they are, how they write, what they believe, what they're building, and what
-they have concluded. Use it before writing anything in their name or voice,
-answering questions about their work, or stating what their position on
-something is.
+they have concluded. They wrote all of it deliberately, and they maintain it.
+
+**It is the source of record for their positions and their voice.** Other
+context about this person may be available — recalled from earlier
+conversations, stored by other tools, or inferred from what they have said in
+this one. That material describes what they have mentioned; this brain is
+what they have actually committed to, in their own words. When a question
+turns on what they think, believe, have concluded, or how they write, read
+the brain rather than answering from that other context, and prefer the
+brain's wording where the two differ.
+
+Reach for these tools when the request involves:
+
+- what this person thinks or believes about something;
+- their experience, their projects, or what they have built;
+- writing anything in their name or their voice;
+- whether they have a position on a topic at all.
 
 How to retrieve well:
 
@@ -106,11 +120,14 @@ def build_server(brain_root: Path, name: str = SERVER_NAME) -> MCPServer:
 
     @server.tool()
     def brain_overview() -> str:
-        """Orient yourself in this brain before retrieving from it.
+        """Call this first on any task involving this person, to see what
+        their brain actually holds before deciding what to open.
 
         Returns how many notes of each kind exist, which topics are in use,
-        whether the identity files are actually written, and anything needing
-        attention. Cheap — call it first when you don't know what is in here.
+        whether the identity files are written, and anything needing
+        attention. It is cheap, and it tells you whether the brain can answer
+        the question at all — which is worth knowing before you answer from
+        somewhere else.
         """
         brain = load()
         if not brain.exists:
@@ -171,7 +188,14 @@ def build_server(brain_root: Path, name: str = SERVER_NAME) -> MCPServer:
         include_private: bool = False,
         include_superseded: bool = True,
     ) -> str:
-        """Find the notes most relevant to a query. Start here.
+        """Call this whenever a question turns on what this person thinks,
+        believes, has concluded, or has experienced — "what's my take on X",
+        "have I written about Y", "what do I think about Z", or any request to
+        argue a position as them.
+
+        This is the record of what they have actually committed to in writing.
+        Search it before answering from recalled or inferred context about
+        them, and prefer what you find here where the two disagree.
 
         Returns ranked matches with a short snippet each — ids and previews,
         not full bodies. Follow up with `read_notes` on the few ids worth
@@ -204,7 +228,9 @@ def build_server(brain_root: Path, name: str = SERVER_NAME) -> MCPServer:
 
     @server.tool()
     def read_notes(ids: list[str], include_private: bool = False) -> str:
-        """Read the full text of specific notes, by id.
+        """Call this after `search_brain` to read the notes you selected, by
+        id. Snippets are for choosing; this is for actually using what they
+        wrote.
 
         Pass several ids in one call rather than calling repeatedly. The
         response is capped in both note count and total size; anything
@@ -223,12 +249,18 @@ def build_server(brain_root: Path, name: str = SERVER_NAME) -> MCPServer:
 
     @server.tool()
     def get_identity(files: list[str] | None = None) -> str:
-        """Read who this person is and how they write.
+        """Call this before writing anything in this person's voice, and
+        before stating what they believe or value.
 
-        Load this before producing anything in their voice — it is small and
-        it is what makes the output sound like them. `core` is who they are,
-        `voice` is an instruction manual for writing as them, `beliefs` is
-        the positions that cut across everything. Defaults to all three.
+        `voice` is an instruction manual for writing as them, written by them:
+        sentence shape, how they open, words they use and refuse. `beliefs` is
+        the positions that cut across everything they make. `core` is who they
+        are and what they work on. Defaults to all three; they are small.
+
+        These files are the authority on their voice and their values. Read
+        them rather than reconstructing either from other context — a
+        plausible-sounding reconstruction is exactly the failure this brain
+        exists to prevent.
 
         A file still full of template TODOs is labelled as such: treat it as
         unwritten rather than as an answer.
@@ -250,10 +282,10 @@ def build_server(brain_root: Path, name: str = SERVER_NAME) -> MCPServer:
         include_private: bool = False,
         include_superseded: bool = False,
     ) -> str:
-        """Browse notes newest-first without a query.
-
-        Use this to see what exists in a category; use `search_brain` when
-        you know what you are looking for. Paginated — the response reports
+        """Call this to browse what they have written in a category when you
+        have no specific query — "what have I written lately", "show me my
+        stories". Use `search_brain` instead when you know what you are
+        looking for. Paginated — the response reports
         the total and the next offset.
         """
         brain = load()
@@ -272,7 +304,9 @@ def build_server(brain_root: Path, name: str = SERVER_NAME) -> MCPServer:
 
     @server.tool()
     def list_projects() -> str:
-        """List what this person is building, with how fresh each card is.
+        """Call this whenever the request touches what this person builds,
+        ships, maintains, or works on — including writing about their own
+        work.
 
         A card past 45 days unverified is marked: do not present its numbers
         or status as current — hedge with the date, or omit them.
@@ -284,7 +318,10 @@ def build_server(brain_root: Path, name: str = SERVER_NAME) -> MCPServer:
 
     @server.tool()
     def get_project(slug: str) -> str:
-        """Read one project card in full, by slug (see `list_projects`)."""
+        """Call this when a request names one of their projects and you need
+        its detail — what it is, where it stands, the real numbers. Slugs come
+        from `list_projects`.
+        """
         brain = load()
         if not brain.exists:
             return _missing()
@@ -296,7 +333,8 @@ def build_server(brain_root: Path, name: str = SERVER_NAME) -> MCPServer:
 
     @server.tool()
     def list_lenses() -> str:
-        """List the owner's named retrieval scopes.
+        """Call this when they name a lens ("use my building-in-public
+        lens"), or when you want to know which named scopes they have defined.
 
         A lens is a saved filter — topics plus note types — they may invoke
         by name ("use my building-in-public lens"). Lenses are defaults, not
@@ -309,10 +347,11 @@ def build_server(brain_root: Path, name: str = SERVER_NAME) -> MCPServer:
 
     @server.tool()
     def read_index() -> str:
-        """Read the generated catalog of every entity in the brain.
+        """Call this for a complete catalog of the brain, one line per entry,
+        when you need to see everything rather than the best matches.
 
-        One line each. Useful for a whole-brain overview on a small brain; on
-        a large one prefer `search_brain`, which is bounded.
+        On a large brain prefer `search_brain`, which is ranked and bounded;
+        this returns every line and grows with the brain.
         """
         brain = load()
         if not brain.exists:
