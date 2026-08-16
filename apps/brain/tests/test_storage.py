@@ -34,6 +34,49 @@ class WriteDocumentTests(TempBrainTestCase):
         write_document(path, {"id": "x"}, "Body.")
         self.assertTrue(path.exists())
 
+    def test_a_scalar_only_mapping_stays_block_style(self):
+        """The identity-file shape. PyYAML collapses an all-scalar mapping to
+        `{visibility: private}` unless the mapping style is set explicitly —
+        valid YAML that round-trips, and unlike every other file in a brain."""
+        path = self.root / "identity.md"
+        write_document(path, {"visibility": "private"}, "Body.")
+        self.assertIn("\nvisibility: private\n", path.read_text())
+        self.assertNotIn("{visibility", path.read_text())
+
+    def test_lists_stay_inline_even_so(self):
+        path = self.root / "note.md"
+        write_document(path, {"id": "x", "topics": ["django", "python"]}, "Body.")
+        text = path.read_text()
+        self.assertIn("topics: [django, python]", text)
+        self.assertIn("\nid: x\n", text)
+
+    def test_every_entity_shape_round_trips(self):
+        shapes = {
+            "identity": {"visibility": "private"},
+            "note": {"id": "x", "topics": ["a"], "superseded_by": None},
+            "lens": {"name": "l", "topics": [], "types": ["take", "story"]},
+            "empty": {},
+        }
+        for label, meta in shapes.items():
+            with self.subTest(shape=label):
+                path = self.root / f"{label}.md"
+                write_document(path, meta, "Body.")
+                self.assertEqual(read_document(path), (meta, "Body."))
+
+    def test_crlf_from_a_browser_textarea_is_stored_as_lf(self):
+        """Browsers submit textarea content with CRLF. A markdown repo should
+        not end up holding Windows line endings because of it."""
+        path = self.root / "note.md"
+        write_document(path, {"id": "x"}, "First line.\r\n\r\nSecond line.")
+        raw = path.read_bytes()
+        self.assertNotIn(b"\r", raw)
+        self.assertIn(b"First line.\n\nSecond line.", raw)
+
+    def test_lone_carriage_returns_are_normalised_too(self):
+        path = self.root / "note.md"
+        write_document(path, {"id": "x"}, "One.\rTwo.")
+        self.assertEqual(read_document(path)[1], "One.\nTwo.")
+
     def test_ends_the_file_with_exactly_one_newline(self):
         path = self.root / "note.md"
         write_document(path, {"id": "x"}, "Body.\n\n\n")

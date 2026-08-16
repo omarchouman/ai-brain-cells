@@ -17,15 +17,55 @@ from .errors import BrainFileError
 DELIMITER = "---"
 
 
+class _FrontmatterDumper(yaml.SafeDumper):
+    """Block mappings, inline sequences — decided per node, not globally.
+
+    PyYAML's `default_flow_style=None` picks per collection: inline when it
+    holds only scalars, block otherwise. That is what keeps
+    `topics: [django, python]` on one line — but it applied to the frontmatter
+    mapping itself too, so a file whose only key was `visibility` came out as
+    `{visibility: private}`. It parsed and round-tripped, which is why it went
+    unnoticed, but it matched nothing else in the brain and looked broken to
+    anyone opening the file.
+
+    Setting the two node kinds separately gets both halves right regardless of
+    what a given file happens to contain.
+    """
+
+    def represent_mapping(self, tag, mapping, flow_style=None):
+        return super().represent_mapping(tag, mapping, flow_style=False)
+
+    def represent_sequence(self, tag, sequence, flow_style=None):
+        return super().represent_sequence(tag, sequence, flow_style=True)
+
+
+def normalise_newlines(text: str) -> str:
+    """Force LF.
+
+    A browser submits `<textarea>` content with CRLF — that is the HTML spec,
+    not a quirk — so every save made through the dashboard was writing Windows
+    line endings into a Unix markdown repo. Nothing broke, because the parser
+    splits on either, but it made `git diff` mark whole files as rewritten the
+    first time anything touched them with LF, which buries the real change.
+    Normalising here catches every writer at once rather than at each form.
+    """
+    return (text or "").replace("\r\n", "\n").replace("\r", "\n")
+
+
 def write_document(path: Path, meta: dict[str, Any], body: str) -> None:
     """Write `meta` as frontmatter above `body`, preserving key order."""
+    body = normalise_newlines(body)
     path.parent.mkdir(parents=True, exist_ok=True)
-    front = yaml.safe_dump(
-        meta,
-        sort_keys=False,
-        allow_unicode=True,
-        default_flow_style=None,
-        width=1000,
+    front = (
+        yaml.dump(
+            meta,
+            Dumper=_FrontmatterDumper,
+            sort_keys=False,
+            allow_unicode=True,
+            width=1000,
+        )
+        if meta
+        else ""
     )
     path.write_text(
         f"{DELIMITER}\n{front}{DELIMITER}\n\n{body.strip()}\n", encoding="utf-8"
