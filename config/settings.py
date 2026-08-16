@@ -17,6 +17,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 BRAIN_PATH = Path(os.environ.get("BRAIN_PATH", BASE_DIR / "brain"))
 BRAIN_TEMPLATE_PATH = BASE_DIR / "brain-template"
 
+# The two Claude skills, and where installing them puts them. User-level so
+# the brain is reachable from every project, not just this folder.
+SKILLS_SOURCE_PATH = BASE_DIR / "skills"
+CLAUDE_SKILLS_PATH = Path(
+    os.environ.get("CLAUDE_SKILLS_PATH", Path.home() / ".claude" / "skills")
+)
+
 SECRET_KEY = os.environ.get(
     "SECRET_KEY", "dev-only-key-this-app-binds-to-localhost-and-stores-nothing"
 )

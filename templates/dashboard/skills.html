@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block wrapclass %}wrap wrap--wide{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <p class="eyebrow">Claude skills</p>
+  <h1>Reaching your brain</h1>
+  <p class="lede">
+    Two skills teach Claude Code how to read from this brain and how to write
+    to it. Installing them at user level means they load in every project you
+    open — not only when Claude Code is pointed at the brain folder.
+  </p>
+</div>
+
+<ul class="rows">
+  {% for skill in skills %}
+  <li>
+    <div class="row">
+      <span class="row-title">
+        <strong>{{ skill.name }}</strong>
+        <br><span class="topics">{{ skill.summary|truncatewords:28 }}</span>
+      </span>
+      {% if skill.state == 'installed' %}
+        <span class="tag tag--good">installed</span>
+      {% elif skill.state == 'stale' %}
+        <span class="tag tag--alert">out of date</span>
+      {% else %}
+        <span class="tag tag--quiet">not installed</span>
+      {% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+
+<p class="help">
+  Installs to <span class="path">{{ install_dir }}</span>, pointing at
+  <span class="path">{{ brain_path }}</span>.
+</p>
+
+<div class="actions">
+  <form method="post" action="{% url 'dashboard:skills_install' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn">Install / update skills</button>
+  </form>
+  <form method="post" action="{% url 'dashboard:skills_uninstall' %}"
+        onsubmit="return confirm('Remove both skill files from your Claude config?');">
+    {% csrf_token %}
+    <button type="submit" class="btn btn--ghost">Remove</button>
+  </form>
+</div>
+
+<div class="notice notice--plain">
+  <p>
+    <span class="notice-title">The path is baked in.</span>
+    Skills installed globally have no way to find the brain on their own, so
+    the files carry its absolute location. Move the brain and reinstall from
+    here, or they will point at nothing.
+  </p>
+  <p>
+    Claude Code reads skills at session start — open a new session after
+    installing.
+  </p>
+</div>
+
+<h2>What each one does</h2>
+
+<h3>mind-reader</h3>
+<p>
+  The retrieval protocol. It loads your identity core on every task, reads
+  <code>INDEX.md</code> to decide what else is worth opening, and pulls a
+  handful of files rather than the whole repo. It is bound by the rules that
+  keep it honest on your behalf: never quote a private note, never present a
+  superseded take as your current position, and never state numbers from a
+  project card that has gone more than 45 days unverified.
+</p>
+
+<h3>mind-feeder</h3>
+<p>
+  The writer, and the only one. It extracts two to four notes from a source,
+  insists on a verbatim quote of your actual words in every take and story,
+  and proposes everything for your approval before a single file is written.
+  A brain that fills itself with unreviewed extractions is one you stop
+  trusting — so it does not get to.
+</p>
+
+<h2>Trying it</h2>
+<p>
+  Open Claude Code in any project and ask for something in your voice — “draft
+  a post about X as me”, or “what's my take on Y”. The reader should trigger
+  on its own. To feed something in, say “add this to my brain”.
+</p>
+{% endblock %}

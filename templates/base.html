@@ -53,6 +53,13 @@
         <li><a href="{% url 'dashboard:lenses' %}" {% if nav == 'lenses' %}aria-current="page"{% endif %}>Lenses<span class="nav-count">{{ brain.lenses|length }}</span></a></li>
       </ul>
     </div>
+
+    <div class="nav-group">
+      <p class="nav-label">Claude</p>
+      <ul class="nav-list">
+        <li><a href="{% url 'dashboard:skills' %}" {% if nav == 'skills' %}aria-current="page"{% endif %}>Skills</a></li>
+      </ul>
+    </div>
     {% endif %}
   </nav>
 

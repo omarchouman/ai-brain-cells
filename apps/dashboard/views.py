@@ -30,6 +30,10 @@ from .forms import (
     TaxonomyForm,
 )
 from .rendering import render_markdown, split_verbatim
+from .skills import install as install_skills
+from .skills import install_dir as skills_install_dir
+from .skills import status as skill_status
+from .skills import uninstall as uninstall_skills
 
 TYPE_LABELS = {
     "take": "takes",
@@ -417,6 +421,55 @@ def project_delete(request: HttpRequest, slug: str) -> HttpResponse:
     )
     _report(request, result, f"Deleted project: {card.title}")
     return redirect("dashboard:projects")
+
+
+# ------------------------------------------------------------------ skills
+
+
+@needs_brain
+def skills_page(request: HttpRequest) -> HttpResponse:
+    brain = current_brain()
+    return render(
+        request,
+        "dashboard/skills.html",
+        {
+            "nav": "skills",
+            "page_title": "Claude skills",
+            "brain": brain,
+            "counts": _nav_counts(brain),
+            "skills": skill_status(brain_root()),
+            "install_dir": skills_install_dir(),
+            "brain_path": brain_root(),
+        },
+    )
+
+
+@require_POST
+@needs_brain
+def skills_install(request: HttpRequest) -> HttpResponse:
+    try:
+        written = install_skills(brain_root())
+    except OSError as exc:
+        messages.error(request, f"Could not write the skills: {exc}")
+    else:
+        messages.success(
+            request,
+            f"Installed {len(written)} skills to {skills_install_dir()}. "
+            f"Open a new Claude Code session to pick them up.",
+        )
+    return redirect("dashboard:skills")
+
+
+@require_POST
+@needs_brain
+def skills_uninstall(request: HttpRequest) -> HttpResponse:
+    try:
+        removed = uninstall_skills()
+    except OSError as exc:
+        messages.error(request, f"Could not remove the skills: {exc}")
+    else:
+        messages.success(request, f"Removed {len(removed)} skill file(s).")
+    return redirect("dashboard:skills")
 
 
 # ---------------------------------------------------------- taxonomy, lenses
