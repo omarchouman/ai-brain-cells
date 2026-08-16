@@ -123,8 +123,9 @@ A few habits that this codebase has learned the hard way:
   Override `CLAUDE_SKILLS_PATH` and `BRAIN_PATH` onto temp directories, as
   `apps/dashboard/tests/test_views.py` does.
 
-There is no CI yet. Run the suite locally and say in the pull request that
-you did.
+CI runs `manage.py check` and the full suite on every push and pull
+request (`.github/workflows/tests.yml`, Python 3.13). Run it locally first
+anyway — the feedback is faster than a round trip through Actions.
 
 ## Commits
 

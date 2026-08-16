@@ -1,0 +1,41 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      # The suite shells out to git, and the app falls back to a local
+      # identity when none is configured. Pointing git at an empty global
+      # config exercises that path deterministically, rather than depending
+      # on whatever the runner image happens to ship — a regression there
+      # would break every commit on a fresh machine, which is exactly the
+      # case a developer's own configured laptop never covers.
+      GIT_CONFIG_GLOBAL: /tmp/empty-gitconfig
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Use an empty global git config
+        run: |
+          git --version
+          : > "$GIT_CONFIG_GLOBAL"
+
+      - name: Run checks
+        run: python manage.py check
+
+      - name: Run tests
+        run: python manage.py test --verbosity 2

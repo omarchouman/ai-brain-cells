@@ -1,5 +1,7 @@
 # ai-brain-cells
 
+[![tests](https://github.com/omarchouman/ai-brain-cells/actions/workflows/tests.yml/badge.svg)](https://github.com/omarchouman/ai-brain-cells/actions/workflows/tests.yml)
+
 **Your context, your voice, your takes — in markdown, where Claude can read them.**
 
 A local dashboard for building a personal knowledge base that Claude Code
