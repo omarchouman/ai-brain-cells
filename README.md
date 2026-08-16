@@ -104,3 +104,16 @@ already worth more than none, and far more than a hundred weak ones.
 
 Dependencies are Django, PyYAML and Markdown. Git is called through
 `subprocess`; there is no build step, no bundler, and no CSS framework.
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request — a
+few of this project's constraints are load-bearing and easy to break by
+accident.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).
+
+The license covers this tool, including the files in `brain-template/`.
+It does not cover your brain: the notes you write in `brain/` are your
+content, under whatever terms you like. That is why no license file is
+copied into a brain when one is created.
