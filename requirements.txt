@@ -1,3 +1,4 @@
 Django==6.1
 PyYAML==6.0.3
 Markdown==3.10.3
+mcp==2.0.0
