@@ -16,6 +16,53 @@ Two pieces:
   consistent, plus the two Claude skills that teach agents how to read from
   it and write to it.
 
+## Where this came from
+
+This project is inspired by
+[**BrainOutside**](https://github.com/hassancs91/brainoutside) by
+[Hasan Aboul Hasan](https://github.com/hassancs91), which worked out the
+ideas this is built on — and the good ones here are his:
+
+- **Identity as a first-class thing.** A wiki holds knowledge but not *you*.
+  Putting `voice.md` and `beliefs.md` at the centre is what lets an agent
+  write *as* someone rather than merely *about* their work.
+- **Note types shaped for making things** — `take`, `story`, `lesson`,
+  `fact` — rather than one undifferentiated pile.
+- **Verbatim quotes as the mechanism for voice.** Keeping the author's actual
+  phrasing in the note, and adapting it rather than summarising it.
+- **Supersede, never delete**, so the brain records how thinking moved.
+- **A staleness rule on project cards**, so agents stop quoting old numbers
+  as current.
+- **An index read first**, so retrieval opens a handful of files instead of
+  a repo.
+
+BrainOutside in turn grew out of
+[Andrej Karpathy's llm-wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
+and the wave of markdown knowledge bases around it.
+
+**What's different here is scope, on purpose.** BrainOutside is the bigger,
+more capable project: a self-hosted server with REST and MCP endpoints,
+API keys with server-enforced visibility tiers, an approval queue where
+agents propose writes, a chat test bench, topic graphs and activity
+visualisations, Postgres, Redis, a worker, and Docker. If you want your
+brain served to every agent you run anywhere, go use it.
+
+This one is deliberately smaller and more direct. One person, one machine,
+no server, no containers, no database at all — `runserver` and a folder of
+markdown. Three dependencies. The trims that follow from that:
+
+| BrainOutside | Here |
+|---|---|
+| Server, MCP, REST, API keys | Skills read the files directly |
+| Three enforced visibility tiers | One flag: `public` / `private` |
+| Agents propose, you approve in a queue | You write it; the feeder skill still proposes |
+| Mandatory provenance on every note | Optional — you're typing these yourself |
+| `content-catalog/`, `eval/`, ledger, chat bench | Cut |
+| Docker, Postgres, Redis, worker | None |
+
+Fewer moving parts, less to run, less to learn. That is the entire pitch —
+if you outgrow it, the brain is plain markdown and it travels.
+
 ## Running it
 
 ```sh
