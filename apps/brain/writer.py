@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
+from .index import refresh_index
 from .notes import (
     FOLDER_BY_TYPE,
     IdentityDoc,
@@ -62,13 +63,24 @@ def assign_note_id(root: Path, note: Note) -> Note:
     return note
 
 
+def _reindex_and_commit(root: Path, message: str) -> GitResult:
+    """Regenerate INDEX.md, then commit it together with whatever changed.
+
+    Same commit on purpose: a note and its catalog line should never arrive
+    separately, or an agent reading the index sees a brain that doesn't
+    match the files.
+    """
+    refresh_index(root)
+    return commit_all(root, message)
+
+
 def _write_and_commit(
     root: Path, path: Path, meta: dict, body: str, message: str, previous: Path | None
 ) -> SaveResult:
     write_document(path, meta, body)
     if previous and previous.resolve() != path.resolve() and previous.exists():
         previous.unlink()
-    return SaveResult(path=path, git=commit_all(root, message))
+    return SaveResult(path=path, git=_reindex_and_commit(root, message))
 
 
 def save_note(root: Path, note: Note, previous_path: Path | None = None) -> SaveResult:
@@ -115,14 +127,14 @@ def save_identity(root: Path, doc: IdentityDoc) -> SaveResult:
 def save_taxonomy(root: Path, topics: list[str]) -> SaveResult:
     root = Path(root)
     path = write_topics(root, topics)
-    return SaveResult(path=path, git=commit_all(root, "Update taxonomy"))
+    return SaveResult(path=path, git=_reindex_and_commit(root, "Update taxonomy"))
 
 
 def delete_entity(root: Path, path: Path, message: str) -> SaveResult:
     root, path = Path(root), Path(path)
     if path.exists():
         path.unlink()
-    return SaveResult(path=path, git=commit_all(root, message))
+    return SaveResult(path=path, git=_reindex_and_commit(root, message))
 
 
 def delete_note(root: Path, note: Note) -> SaveResult:
@@ -145,5 +157,5 @@ def supersede_note(
     write_document(path, old.to_meta(), old.body)
     return SaveResult(
         path=path,
-        git=commit_all(Path(root), f"Supersede {old.type}: {old.title}"),
+        git=_reindex_and_commit(Path(root), f"Supersede {old.type}: {old.title}"),
     )
