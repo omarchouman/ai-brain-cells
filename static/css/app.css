@@ -49,6 +49,18 @@
   --r-sm:    5px;
 }
 
+/* Light, in two places on purpose.
+ *
+ * The first block follows the OS for anyone who has expressed no preference.
+ * The second is the explicit choice, and it must sit OUTSIDE the media query:
+ * with the dark palette on bare :root, a light override that lives only
+ * inside `prefers-color-scheme: light` never applies on a machine whose OS is
+ * dark — the attribute flips, nothing repaints, and the toggle looks broken in
+ * exactly one direction.
+ *
+ * CSS has no way to share a declaration block between a media rule and a plain
+ * selector, so the values are duplicated. A test asserts the two blocks stay
+ * identical rather than trusting anyone to remember. */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     color-scheme: light;
@@ -76,6 +88,33 @@
 
     --wash: .3;
   }
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+
+    --bg:          #faf9fd;
+    --surface:     #f3f0fa;
+    --raised:      #ffffff;
+    --line:        #e5e0f2;
+    --line-firm:   #cfc6e6;
+    --text:        #191428;
+    --text-soft:   #4b4363;
+    --muted:       #736a8c;
+
+    --accent:      #6d3bf5;
+    --accent-deep: #5526d8;
+    --accent-tint: #f0eaff;
+    --accent-edge: #d7cbfa;
+
+    --good:        #1a7f4b;
+    --good-tint:   #e6f7ee;
+    --alert:       #a55a06;
+    --alert-tint:  #fdf1de;
+    --danger:      #c02637;
+    --danger-tint: #fdeaec;
+
+    --wash: .3;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
